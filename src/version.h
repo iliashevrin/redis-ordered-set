@@ -1,0 +1,19 @@
+#ifndef __VERSION_H_
+
+
+#ifndef OM_VERSION_MAJOR
+#define OM_VERSION_MAJOR 0
+#endif
+
+#ifndef OM_VERSION_MINOR
+#define OM_VERSION_MINOR 1
+#endif
+
+#ifndef OM_VERSION_PATCH
+#define OM_VERSION_PATCH 0
+#endif
+
+#define OM_MODULE_VERSION \
+  (OM_VERSION_MAJOR * 10000 + OM_VERSION_MINOR * 100 + OM_VERSION_PATCH)
+
+#endif
