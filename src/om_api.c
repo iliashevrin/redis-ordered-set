@@ -6,9 +6,21 @@ int compare(OM* om, const char* x, const char* y) {
 
 	if (x_node == NULL || y_node == NULL) {
 		return ELEMENT_NOT_FOUND;
-	} 
+	}
 
-	return lcompare(x_node, y_node);
+	if (x_node->upper->label > y_node->upper->label) {
+		return 1;
+	} else if (x_node->upper->label < y_node->upper->label) {
+		return -1;
+	} else {
+		if (x_node->label > y_node->label) {
+			return 1;
+		} else if (x_node->label < y_node->label) {
+			return -1;
+		} else {
+			return 0;
+		}
+	}
 }
 
 int push_after(OM* om, const char* x, const char* y, size_t y_len) {

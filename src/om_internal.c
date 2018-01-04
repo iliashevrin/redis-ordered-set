@@ -88,11 +88,6 @@ static UNode* upush(UNode* this, LNode* lower, size_t* height, double* threshold
 	return new_node;
 }
 
-static inline void uremove(UNode* this) {
-    this->next->prev = this->prev;
-    this->prev->next = this->next;
-}
-
 static inline LNode* lpopulate(LNode* head, UNode* upper, const size_t list_size, const size_t size) {
 
     uint64_t new_label = 0; 
@@ -211,7 +206,8 @@ void lremove(LNode* x) {
     --(x->upper->lsize);
     // List is done, need to delete upper label
     if (x->upper->lsize == 0) {
-        uremove(x->upper);
+        x->upper->next->prev = this->prev;
+        x->upper->prev->next = this->next;
     } else {
     	// If we're deleting first representative node in list
 	    if (x->upper->lower == x) {
