@@ -45,14 +45,14 @@ int push_before(OM* om, const char* x, const char* y, size_t y_len) {
 
 	LNode* y_node = get_node_write_mod(&om->nodes, y, y_len, &lremove);
 	if (x_node == om->lsentinel->next) { // Check if x is first
-        lpush_first(y_node, om->lsentinel);
-        lrelabel(y_node->next, table_size(om->nodes), &om->height, &om->threshold);
-    } else {
-        lpush(x_node->prev, y_node);
-        lrelabel(y_node, table_size(om->nodes), &om->height, &om->threshold);
+		lpush_first(y_node, om->lsentinel);
+		lrelabel(y_node->next, table_size(om->nodes), &om->height, &om->threshold);
+	} else {
+		lpush(x_node->prev, y_node);
+		lrelabel(y_node, table_size(om->nodes), &om->height, &om->threshold);
 	}
 
-    return SUCCESS;
+	return SUCCESS;
 }
 
 int push_first(OM* om, const char* x, size_t x_len) {
@@ -61,13 +61,13 @@ int push_first(OM* om, const char* x, size_t x_len) {
 
 	// If size is one push first and push last are the same
 	if (size == 1) {
-        lpush_initial(x_node, om->lsentinel, om->usentinel);
-    } else {
-        lpush_first(x_node, om->lsentinel);
-        lrelabel(x_node->next, size, &om->height, &om->threshold);
-    }
+		lpush_initial(x_node, om->lsentinel, om->usentinel);
+	} else {
+		lpush_first(x_node, om->lsentinel);
+		lrelabel(x_node->next, size, &om->height, &om->threshold);
+	}
 
-    return SUCCESS;
+	return SUCCESS;
 }
 
 int push_last(OM* om, const char* x, size_t x_len) {
@@ -76,13 +76,13 @@ int push_last(OM* om, const char* x, size_t x_len) {
 
 	// If size is one push first and push last are the same
 	if (size == 1) {
-        lpush_initial(x_node, om->lsentinel, om->usentinel);
-    } else {
-        lpush(om->lsentinel->prev, x_node);
-        lrelabel(x_node, size, &om->height, &om->threshold);
-    }
+		lpush_initial(x_node, om->lsentinel, om->usentinel);
+	} else {
+		lpush(om->lsentinel->prev, x_node);
+		lrelabel(x_node, size, &om->height, &om->threshold);
+	}
 
-    return SUCCESS;
+	return SUCCESS;
 }
 
 int remove_item(OM* om, const char* x) {

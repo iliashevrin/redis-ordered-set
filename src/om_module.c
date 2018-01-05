@@ -532,5 +532,4 @@ int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) 
                                                .mem_usage = OMMemUsage};
     OMType = RedisModule_CreateDataType(ctx, "OM-iliash", OM_ENCODING_VERSION, &type_methods);
     return OMType == NULL ? REDISMODULE_ERR : REDISMODULE_OK;
-    return REDISMODULE_OK;
 }

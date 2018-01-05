@@ -11,7 +11,6 @@
 #define LOG2(X) ((unsigned) (8 * sizeof(unsigned long long) - __builtin_clzll((X)) - 1))
 #define UNSIGNED_SIZE 64
 
-int lcompare(LNode*, LNode*);
 void lpush(LNode*, LNode*);
 void lrelabel(LNode*, const size_t, size_t*, double*);
 void lremove(LNode*);

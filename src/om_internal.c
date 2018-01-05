@@ -10,14 +10,14 @@ static inline uint64_t step(const size_t height, const long double threshold) {
 
 static void urelabel(UNode* left, UNode* right, size_t* height, double* threshold) {
 
-	size_t i = 1;
-	size_t items = 2;
-	unsigned __int128 tlabel = left->label;
-	long double items_threshold = 1;
+    size_t i = 1;
+    size_t items = 2;
+    unsigned __int128 tlabel = left->label;
+    long double items_threshold = 1;
     double tfactor = 2 / *threshold;
 
-	do {
-		if ((tlabel & 1) != 0) { // Check left subrange
+    do {
+        if ((tlabel & 1) != 0) { // Check left subrange
             tlabel = tlabel >> 1;
             while (left->prev->lsize != 0 && (left->prev->label >> i) >= tlabel) {
                 left = left->prev;
@@ -42,50 +42,50 @@ static void urelabel(UNode* left, UNode* right, size_t* height, double* threshol
         *threshold = 2 / pow(items, 1./i);
     }
 
-	// The relabeling
+    // The relabeling
     uint64_t lstep = step(i, items_threshold);
-	tlabel = tlabel << (i-1);
-	while (left != right->next) {
-		left->label = tlabel;
-		tlabel += lstep;
-		left = left->next;
-	}
+    tlabel = tlabel << (i-1);
+    while (left != right->next) {
+        left->label = tlabel;
+        tlabel += lstep;
+        left = left->next;
+  }
 }
 
 static inline UNode* upush_initial(UNode* usentinel) { 
-	UNode* new_node = RedisModule_Alloc(sizeof(UNode));
-	new_node->next = usentinel;
-	new_node->prev = usentinel;
-	new_node->lsize = 0;
-	new_node->label = 0;
-	usentinel->next = new_node;
-	usentinel->prev = new_node;
-	return new_node;
+    UNode* new_node = RedisModule_Alloc(sizeof(UNode));
+    new_node->next = usentinel;
+    new_node->prev = usentinel;
+    new_node->lsize = 0;
+    new_node->label = 0;
+    usentinel->next = new_node;
+    usentinel->prev = new_node;
+    return new_node;
 }
 
 static UNode* upush(UNode* this, LNode* lower, size_t* height, double* threshold) {
 
     // Adding new upper node
-	UNode* new_node = RedisModule_Alloc(sizeof(UNode));
-	new_node->lower = lower;
-	new_node->prev = this;
-	new_node->next = this->next;
-	new_node->lsize = 0;
-	this->next->prev = new_node;
-	this->next = new_node;
+    UNode* new_node = RedisModule_Alloc(sizeof(UNode));
+    new_node->lower = lower;
+    new_node->prev = this;
+    new_node->next = this->next;
+    new_node->lsize = 0;
+    this->next->prev = new_node;
+    this->next = new_node;
 
-	// This is the last node, we simply increment by one
-	if (new_node->next->lsize == 0) {
-		new_node->label = this->label + 1;
-	} else {
-		if (this->label + 1 == new_node->next->label) {
-			urelabel(this, new_node, height, threshold);
-		} else {
-			new_node->label = (this->label + new_node->next->label) >> 1;
-		}
-	}
+    // This is the last node, we simply increment by one
+    if (new_node->next->lsize == 0) {
+    	new_node->label = this->label + 1;
+    } else {
+    	if (this->label + 1 == new_node->next->label) {
+    		urelabel(this, new_node, height, threshold);
+    	} else {
+    		new_node->label = (this->label + new_node->next->label) >> 1;
+    	}
+    }
 
-	return new_node;
+    return new_node;
 }
 
 static inline LNode* lpopulate(LNode* head, UNode* upper, const size_t list_size, const size_t size) {
@@ -131,10 +131,10 @@ static void lsplit(LNode* this, const size_t size, size_t* height, double* thres
 }
 
 static inline void linit(LNode* node, unsigned long long label, LNode* next, LNode* prev, UNode* upper) {
-	node->label = label;
-	node->next = next;
-	node->prev = prev;
-	node->upper = upper;
+    node->label = label;
+    node->next = next;
+    node->prev = prev;
+    node->upper = upper;
 }
 
 void lrelabel(LNode* this, const size_t size, size_t* height, double* threshold) {
@@ -156,22 +156,6 @@ void lrelabel(LNode* this, const size_t size, size_t* height, double* threshold)
     }
 }
 
-int lcompare(LNode* x, LNode* y) {
-	if (x->upper->label > y->upper->label) {
-		return 1;
-	} else if (x->upper->label < y->upper->label) {
-		return -1;
-	} else {
-		if (x->label > y->label) {
-			return 1;
-		} else if (x->label < y->label) {
-			return -1;
-		} else {
-			return 0;
-		}
-	}
-}
-
 void lpush_initial(LNode* x, LNode* lsentinel, UNode* usentinel) {
 	UNode* initial_upper = upush_initial(usentinel);
 	linit(x, 0, lsentinel, lsentinel, initial_upper);
@@ -183,12 +167,12 @@ void lpush_initial(LNode* x, LNode* lsentinel, UNode* usentinel) {
 }
 
 void lpush_first(LNode* x, LNode* lsentinel) {
-	LNode* first = lsentinel->next;
-	linit(x, first->label, first, lsentinel, first->upper);
+    LNode* first = lsentinel->next;
+    linit(x, first->label, first, lsentinel, first->upper);
     ++(x->upper->lsize);
 
-	// Swap first and new one
-	x->upper->lower = x;
+    // Swap first and new one
+    x->upper->lower = x;
     first->prev = x;
     lsentinel->next = x;
 }
@@ -206,13 +190,13 @@ void lremove(LNode* x) {
     --(x->upper->lsize);
     // List is done, need to delete upper label
     if (x->upper->lsize == 0) {
-        x->upper->next->prev = this->prev;
-        x->upper->prev->next = this->next;
+        x->upper->next->prev = x->upper->prev;
+        x->upper->prev->next = x->upper->next;
     } else {
     	// If we're deleting first representative node in list
-	    if (x->upper->lower == x) {
-	        x->upper->lower = x->next;
-	    }
+        if (x->upper->lower == x) {
+            x->upper->lower = x->next;
+        }
     }
 
     x->next->prev = x->prev;
