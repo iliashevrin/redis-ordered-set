@@ -35,45 +35,45 @@ MU_TEST(test_hash) {
 
 }
 
-MU_TEST(test_push_first) {
+MU_TEST(test_add_first) {
 
-	mu_assert_int_eq(SUCCESS, push_first(om, "foo", 3));
+	mu_assert_int_eq(SUCCESS, add_first(om, "foo", 3));
 	mu_assert_string_eq("foo", om->lsentinel->next->key);
-	mu_assert_int_eq(SUCCESS, push_first(om, "bar!", 4));
+	mu_assert_int_eq(SUCCESS, add_first(om, "bar!", 4));
 	mu_assert_string_eq("bar!", om->lsentinel->next->key);
 
 }
 
-MU_TEST(test_push_last) {
+MU_TEST(test_add_last) {
 
-	mu_assert_int_eq(SUCCESS, push_last(om, "foo", 3));
+	mu_assert_int_eq(SUCCESS, add_last(om, "foo", 3));
 	mu_assert_string_eq("foo", om->lsentinel->prev->key);
-	mu_assert_int_eq(SUCCESS, push_last(om, "bar!", 4));
+	mu_assert_int_eq(SUCCESS, add_last(om, "bar!", 4));
 	mu_assert_string_eq("bar!", om->lsentinel->prev->key);
 
 }
 
-MU_TEST(test_push_after) {
+MU_TEST(test_add_after) {
 
-	push_first(om, "foo", 3);
-	mu_assert_int_eq(SUCCESS, push_after(om, "foo", "bar!", 4));
+	add_first(om, "foo", 3);
+	mu_assert_int_eq(SUCCESS, add_after(om, "foo", "bar!", 4));
 	mu_assert_string_eq("bar!", om->lsentinel->next->next->key);
-	mu_assert_int_eq(ELEMENT_NOT_FOUND, push_after(om, "notexist", "new", 3));
-	mu_assert_int_eq(SUCCESS, push_after(om, "bar!", "baz", 3));
-	mu_assert_int_eq(SUCCESS, push_after(om, "baz", "foo", 3));
+	mu_assert_int_eq(ELEMENT_NOT_FOUND, add_after(om, "notexist", "new", 3));
+	mu_assert_int_eq(SUCCESS, add_after(om, "bar!", "baz", 3));
+	mu_assert_int_eq(SUCCESS, add_after(om, "baz", "foo", 3));
 	mu_assert_string_eq("bar!", om->lsentinel->next->key);
 	mu_assert_string_eq("foo", om->lsentinel->prev->key);
 
 }
 
-MU_TEST(test_push_before) {
+MU_TEST(test_add_before) {
 
-	push_last(om, "foo", 3);
-	mu_assert_int_eq(SUCCESS, push_before(om, "foo", "bar!", 4));
+	add_last(om, "foo", 3);
+	mu_assert_int_eq(SUCCESS, add_before(om, "foo", "bar!", 4));
 	mu_assert_string_eq("bar!", om->lsentinel->prev->prev->key);
-	mu_assert_int_eq(ELEMENT_NOT_FOUND, push_before(om, "notexist", "new", 3));
-	mu_assert_int_eq(SUCCESS, push_before(om, "bar!", "baz", 3));
-	mu_assert_int_eq(SUCCESS, push_before(om, "baz", "foo", 3));
+	mu_assert_int_eq(ELEMENT_NOT_FOUND, add_before(om, "notexist", "new", 3));
+	mu_assert_int_eq(SUCCESS, add_before(om, "bar!", "baz", 3));
+	mu_assert_int_eq(SUCCESS, add_before(om, "baz", "foo", 3));
 	mu_assert_string_eq("bar!", om->lsentinel->prev->key);
 	mu_assert_string_eq("foo", om->lsentinel->next->key);
 
@@ -81,9 +81,9 @@ MU_TEST(test_push_before) {
 
 MU_TEST(test_remove) {
 
-	push_first(om, "foo", 3);
-	push_after(om, "foo", "bar!", 4);
-	push_after(om, "bar!", "baz", 3);
+	add_first(om, "foo", 3);
+	add_after(om, "foo", "bar!", 4);
+	add_after(om, "bar!", "baz", 3);
 	mu_assert_int_eq(SUCCESS, remove_item(om, "bar!"));
 	mu_assert_int_eq(ELEMENT_NOT_FOUND, remove_item(om, "notexist"));
 	mu_assert_int_eq(SUCCESS, remove_item(om, "foo"));
@@ -93,9 +93,9 @@ MU_TEST(test_remove) {
 
 MU_TEST(test_compare) {
 
-	push_first(om, "foo", 3);
-	push_after(om, "foo", "bar!", 4);
-	push_after(om, "bar!", "baz", 3);
+	add_first(om, "foo", 3);
+	add_after(om, "foo", "bar!", 4);
+	add_after(om, "bar!", "baz", 3);
 	mu_assert_int_eq(-1, compare(om, "foo", "bar!"));
 	mu_assert_int_eq(0, compare(om, "bar!", "bar!"));
 	mu_assert_int_eq(1, compare(om, "baz", "bar!"));
@@ -107,10 +107,10 @@ MU_TEST_SUITE(test_suite) {
 
 	MU_SUITE_CONFIGURE(&test_setup, &test_teardown);
 	MU_RUN_TEST(test_hash);
-	MU_RUN_TEST(test_push_first);
-	MU_RUN_TEST(test_push_last);
-	MU_RUN_TEST(test_push_after);
-	MU_RUN_TEST(test_push_before);
+	MU_RUN_TEST(test_add_first);
+	MU_RUN_TEST(test_add_last);
+	MU_RUN_TEST(test_add_after);
+	MU_RUN_TEST(test_add_before);
 	MU_RUN_TEST(test_remove);
 	MU_RUN_TEST(test_compare);
 

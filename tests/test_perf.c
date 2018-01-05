@@ -54,12 +54,12 @@ int main(int argc, char **argv) {
     printf(" -- Begin performance test \n");
     gettimeofday(&start, NULL);
 
-	// Generate strings and push_first / push_last
+	// Generate strings and add_first / add_last
 	for (size_t i = 0; i < INITIAL_ARRAY; ++i) {
 		if (i % 2) {
-			push_first(om, initial_array[i], STR_SIZE);
+			add_first(om, initial_array[i], STR_SIZE);
 		} else {
-			push_last(om, initial_array[i], STR_SIZE);
+			add_last(om, initial_array[i], STR_SIZE);
 		}
 	}
 	
@@ -73,14 +73,14 @@ int main(int argc, char **argv) {
 		curr = curr->next;
 	}
 
-	// Randomly choose item and push_before / push_after
+	// Randomly choose item and add_before / add_after
 	for (size_t j = 0; j < ITERATIONS; ++j) {
 		int rand_index = rand() % INITIAL_ARRAY;
 		if (strcmp(initial_array[rand_index], big_array[j]) != 0) {
 			if (j % 2) {
-				push_after(om, initial_array[rand_index], big_array[j], STR_SIZE);
+				add_after(om, initial_array[rand_index], big_array[j], STR_SIZE);
 			} else {
-				push_before(om, initial_array[rand_index], big_array[j], STR_SIZE);
+				add_before(om, initial_array[rand_index], big_array[j], STR_SIZE);
 			}
 		}
 	}

@@ -16,7 +16,7 @@ static int getOM(RedisModuleKey* key, OM** om) {
     }
 }
 
-static int OMPushAfter_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OMAddAfter_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
     if (argc != 4) {
         RedisModule_WrongArity(ctx);
@@ -33,7 +33,7 @@ static int OMPushAfter_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **arg
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
     } else if (result == GET_OM_NOT_EXIST) {
-        RedisModule_ReplyWithError(ctx, OM_NOT_EXIST_ERR);
+        RedisModule_ReplyWithNull(ctx);
         return REDISMODULE_ERR;
     }
 
@@ -45,9 +45,9 @@ static int OMPushAfter_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **arg
     size_t x_len, y_len;
     const char* x = RedisModule_StringPtrLen(argv[2], &x_len);
     const char* y = RedisModule_StringPtrLen(argv[3], &y_len);
-    int push_result = push_after(om, x, y, y_len);
+    int add_result = add_after(om, x, y, y_len);
 
-    if (push_result == ELEMENT_NOT_FOUND) {
+    if (add_result == ELEMENT_NOT_FOUND) {
         RedisModule_ReplyWithError(ctx, OM_ELEMENT_NOT_FOUND);
         return REDISMODULE_ERR;
     }
@@ -56,7 +56,7 @@ static int OMPushAfter_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **arg
     return REDISMODULE_OK;
 }
 
-static int OMPushBefore_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OMAddBefore_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
     if (argc != 4) {
         RedisModule_WrongArity(ctx);
@@ -73,7 +73,7 @@ static int OMPushBefore_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **ar
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
     } else if (result == GET_OM_NOT_EXIST) {
-        RedisModule_ReplyWithError(ctx, OM_NOT_EXIST_ERR);
+        RedisModule_ReplyWithNull(ctx);
         return REDISMODULE_ERR;
     }
 
@@ -85,9 +85,9 @@ static int OMPushBefore_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **ar
     size_t x_len, y_len;
     const char* x = RedisModule_StringPtrLen(argv[2], &x_len);
     const char* y = RedisModule_StringPtrLen(argv[3], &y_len);
-    int push_result = push_before(om, x, y, y_len);
+    int add_result = add_before(om, x, y, y_len);
 
-    if (push_result == ELEMENT_NOT_FOUND) {
+    if (add_result == ELEMENT_NOT_FOUND) {
         RedisModule_ReplyWithError(ctx, OM_ELEMENT_NOT_FOUND);
         return REDISMODULE_ERR;
     }
@@ -114,7 +114,7 @@ static int OMRemove_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, 
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
     } else if (result == GET_OM_NOT_EXIST) {
-        RedisModule_ReplyWithError(ctx, OM_NOT_EXIST_ERR);
+        RedisModule_ReplyWithNull(ctx);
         return REDISMODULE_ERR;
     }
 
@@ -135,7 +135,7 @@ static int OMRemove_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, 
     return REDISMODULE_OK;
 }
 
-static int OMPushFirst_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OMAddFirst_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
     if (argc != 3) {
         RedisModule_WrongArity(ctx);
@@ -159,12 +159,12 @@ static int OMPushFirst_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **arg
 
     size_t x_len;
     const char* x = RedisModule_StringPtrLen(argv[2], &x_len);
-    push_first(om, x, x_len);
+    add_first(om, x, x_len);
     RedisModule_ReplyWithSimpleString(ctx, "OK");
     return REDISMODULE_OK;
 }
 
-static int OMPushLast_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OMAddLast_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
     if (argc != 3) {
         RedisModule_WrongArity(ctx);
@@ -188,7 +188,7 @@ static int OMPushLast_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv
 
     size_t x_len;
     const char* x = RedisModule_StringPtrLen(argv[2], &x_len);
-    push_last(om, x, x_len);
+    add_last(om, x, x_len);
     RedisModule_ReplyWithSimpleString(ctx, "OK");
     return REDISMODULE_OK;
 }
@@ -209,7 +209,7 @@ static int OMCompare_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv,
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
     } else if (result == GET_OM_NOT_EXIST) {
-        RedisModule_ReplyWithError(ctx, OM_NOT_EXIST_ERR);
+        RedisModule_ReplyWithNull(ctx);
         return REDISMODULE_ERR;
     }
 
@@ -248,7 +248,7 @@ static int OMNext_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
     } else if (result == GET_OM_NOT_EXIST) {
-        RedisModule_ReplyWithError(ctx, OM_NOT_EXIST_ERR);
+        RedisModule_ReplyWithArray(ctx, 0);
         return REDISMODULE_ERR;
     }
 
@@ -299,7 +299,7 @@ static int OMPrev_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
     } else if (result == GET_OM_NOT_EXIST) {
-        RedisModule_ReplyWithError(ctx, OM_NOT_EXIST_ERR);
+        RedisModule_ReplyWithArray(ctx, 0);
         return REDISMODULE_ERR;
     }
 
@@ -350,7 +350,7 @@ static int OMFirst_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, i
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
     } else if (result == GET_OM_NOT_EXIST) {
-        RedisModule_ReplyWithError(ctx, OM_NOT_EXIST_ERR);
+        RedisModule_ReplyWithArray(ctx, 0);
         return REDISMODULE_ERR;
     }
 
@@ -396,7 +396,7 @@ static int OMLast_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
     } else if (result == GET_OM_NOT_EXIST) {
-        RedisModule_ReplyWithError(ctx, OM_NOT_EXIST_ERR);
+        RedisModule_ReplyWithArray(ctx, 0);
         return REDISMODULE_ERR;
     }
 
@@ -442,7 +442,7 @@ static int OMList_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
     } else if (result == GET_OM_NOT_EXIST) {
-        RedisModule_ReplyWithError(ctx, OM_NOT_EXIST_ERR);
+        RedisModule_ReplyWithArray(ctx, 0);
         return REDISMODULE_ERR;
     }
 
@@ -458,7 +458,7 @@ static int OMList_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
     return REDISMODULE_OK;
 }
 
-static int OMSize_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OMCard_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
     if (argc != 2) {
         RedisModule_WrongArity(ctx);
@@ -474,7 +474,7 @@ static int OMSize_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
     } else if (result == GET_OM_NOT_EXIST) {
-        RedisModule_ReplyWithError(ctx, OM_NOT_EXIST_ERR);
+        RedisModule_ReplyWithLongLong(ctx, 0);
         return REDISMODULE_ERR;
     }
 
@@ -487,10 +487,10 @@ int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) 
         return REDISMODULE_ERR;
     }
 
-    if (RedisModule_CreateCommand(ctx, "OM.PUSHAFTER", OMPushAfter_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OM.ADDAFTER", OMAddAfter_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
-    if (RedisModule_CreateCommand(ctx, "OM.PUSHBEFORE", OMPushBefore_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OM.ADDBEFORE", OMAddBefore_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
     if (RedisModule_CreateCommand(ctx, "OM.REMOVE", OMRemove_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
@@ -499,10 +499,10 @@ int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) 
     if (RedisModule_CreateCommand(ctx, "OM.COMPARE", OMCompare_RedisCommand, "readonly fast", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
-    if (RedisModule_CreateCommand(ctx, "OM.PUSHFIRST", OMPushFirst_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OM.ADDFIRST", OMAddFirst_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
-    if (RedisModule_CreateCommand(ctx, "OM.PUSHLAST", OMPushLast_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OM.ADDLAST", OMAddLast_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
     if (RedisModule_CreateCommand(ctx, "OM.NEXT", OMNext_RedisCommand, "readonly", 1, 1, 1) != REDISMODULE_OK) {
@@ -520,7 +520,7 @@ int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) 
     if (RedisModule_CreateCommand(ctx, "OM.LIST", OMList_RedisCommand, "readonly", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
-    if (RedisModule_CreateCommand(ctx, "OM.SIZE", OMSize_RedisCommand, "readonly fast", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OM.CARD", OMCard_RedisCommand, "readonly fast", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
 

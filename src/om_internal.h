@@ -11,10 +11,10 @@
 #define LOG2(X) ((unsigned) (8 * sizeof(unsigned long long) - __builtin_clzll((X)) - 1))
 #define UNSIGNED_SIZE 64
 
-void lpush(LNode*, LNode*);
+void ladd(LNode*, LNode*);
 void lrelabel(LNode*, const size_t, size_t*, double*);
 void lremove(LNode*);
-void lpush_first(LNode*, LNode*);
-void lpush_initial(LNode*, LNode*, UNode*);
+void ladd_first(LNode*, LNode*);
+void ladd_initial(LNode*, LNode*, UNode*);
 
 #endif

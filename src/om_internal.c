@@ -23,7 +23,7 @@ static void urelabel(UNode* left, UNode* right, size_t* height, double* threshol
                 left = left->prev;
                 ++items;
             }
-		} else { // Check right subrange
+        } else { // Check right subrange
             tlabel = tlabel >> 1;
             while (right->next->lsize != 0 && (right->next->label >> i) <= tlabel) {
                 right = right->next;
@@ -52,7 +52,7 @@ static void urelabel(UNode* left, UNode* right, size_t* height, double* threshol
   }
 }
 
-static inline UNode* upush_initial(UNode* usentinel) { 
+static inline UNode* uadd_initial(UNode* usentinel) { 
     UNode* new_node = RedisModule_Alloc(sizeof(UNode));
     new_node->next = usentinel;
     new_node->prev = usentinel;
@@ -63,7 +63,7 @@ static inline UNode* upush_initial(UNode* usentinel) {
     return new_node;
 }
 
-static UNode* upush(UNode* this, LNode* lower, size_t* height, double* threshold) {
+static UNode* uadd(UNode* this, LNode* lower, size_t* height, double* threshold) {
 
     // Adding new upper node
     UNode* new_node = RedisModule_Alloc(sizeof(UNode));
@@ -78,11 +78,11 @@ static UNode* upush(UNode* this, LNode* lower, size_t* height, double* threshold
     if (new_node->next->lsize == 0) {
     	new_node->label = this->label + 1;
     } else {
-    	if (this->label + 1 == new_node->next->label) {
-    		urelabel(this, new_node, height, threshold);
-    	} else {
-    		new_node->label = (this->label + new_node->next->label) >> 1;
-    	}
+        if (this->label + 1 == new_node->next->label) {
+           urelabel(this, new_node, height, threshold);
+        } else {
+            new_node->label = (this->label + new_node->next->label) >> 1;
+        }
     }
 
     return new_node;
@@ -119,13 +119,13 @@ static void lsplit(LNode* this, const size_t size, size_t* height, double* thres
 
         // Split list into lists of size log N
         while (all + dbl_log_size <= initial_size) {
-            curr_upper = upush(curr_upper, head, height, threshold);
+            curr_upper = uadd(curr_upper, head, height, threshold);
             all += log_size;
             head = lpopulate(head, curr_upper, log_size, size);
         }
 
         // Create the last list with remaining nodes
-        curr_upper = upush(curr_upper, head, height, threshold);
+        curr_upper = uadd(curr_upper, head, height, threshold);
         lpopulate(head, curr_upper, initial_size - all, size);
     }
 }
@@ -156,17 +156,17 @@ void lrelabel(LNode* this, const size_t size, size_t* height, double* threshold)
     }
 }
 
-void lpush_initial(LNode* x, LNode* lsentinel, UNode* usentinel) {
-	UNode* initial_upper = upush_initial(usentinel);
-	linit(x, 0, lsentinel, lsentinel, initial_upper);
-	++(x->upper->lsize);
+void ladd_initial(LNode* x, LNode* lsentinel, UNode* usentinel) {
+    UNode* initial_upper = uadd_initial(usentinel);
+    linit(x, 0, lsentinel, lsentinel, initial_upper);
+    ++(x->upper->lsize);
 
     x->upper->lower = x;
     lsentinel->next = x;
     lsentinel->prev = x;
 }
 
-void lpush_first(LNode* x, LNode* lsentinel) {
+void ladd_first(LNode* x, LNode* lsentinel) {
     LNode* first = lsentinel->next;
     linit(x, first->label, first, lsentinel, first->upper);
     ++(x->upper->lsize);
@@ -177,12 +177,12 @@ void lpush_first(LNode* x, LNode* lsentinel) {
     lsentinel->next = x;
 }
 
-void lpush(LNode* x, LNode* y) {
-	linit(y, x->label, x->next, x, x->upper);
-	++(x->upper->lsize);
+void ladd(LNode* x, LNode* y) {
+    linit(y, x->label, x->next, x, x->upper);
+    ++(x->upper->lsize);
 
-	x->next->prev = y;
-	x->next = y;
+    x->next->prev = y;
+    x->next = y;
 }
 
 void lremove(LNode* x) {

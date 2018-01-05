@@ -13,10 +13,10 @@ typedef struct {
 } OM;
 
 int compare(OM*, const char*, const char*);
-int push_after(OM*, const char*, const char*, size_t);
-int push_before(OM*, const char*, const char*, size_t);
-int push_first(OM*, const char*, size_t);
-int push_last(OM*, const char*, size_t);
+int add_after(OM*, const char*, const char*, size_t);
+int add_before(OM*, const char*, const char*, size_t);
+int add_first(OM*, const char*, size_t);
+int add_last(OM*, const char*, size_t);
 int remove_item(OM*, const char*);
 
 #define SUCCESS 10
