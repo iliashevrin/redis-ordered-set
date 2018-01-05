@@ -2,7 +2,7 @@ from rmtest import ModuleTestCase
 from redis import ResponseError
 import unittest
 
-class OMTestCase(ModuleTestCase('../src/om_module.so')):
+class OMTestCase(ModuleTestCase('../src/orderedset.so')):
 
 	def test_push_first(self):
 
