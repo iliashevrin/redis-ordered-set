@@ -166,7 +166,7 @@ void ladd_initial(LNode* x, LNode* lsentinel, UNode* usentinel) {
     lsentinel->prev = x;
 }
 
-void ladd_first(LNode* x, LNode* lsentinel) {
+void ladd_head(LNode* x, LNode* lsentinel) {
     LNode* first = lsentinel->next;
     linit(x, first->label, first, lsentinel, first->upper);
     ++(x->upper->lsize);

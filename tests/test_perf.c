@@ -54,12 +54,12 @@ int main(int argc, char **argv) {
     printf(" -- Begin performance test \n");
     gettimeofday(&start, NULL);
 
-	// Generate strings and add_first / add_last
+	// Generate strings and add_head / add_tail
 	for (size_t i = 0; i < INITIAL_ARRAY; ++i) {
 		if (i % 2) {
-			add_first(om, initial_array[i], STR_SIZE);
+			add_head(om, initial_array[i], STR_SIZE);
 		} else {
-			add_last(om, initial_array[i], STR_SIZE);
+			add_tail(om, initial_array[i], STR_SIZE);
 		}
 	}
 	

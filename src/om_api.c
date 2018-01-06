@@ -45,7 +45,7 @@ int add_before(OM* om, const char* x, const char* y, size_t y_len) {
 
 	LNode* y_node = get_node_write_mod(&om->nodes, y, y_len, &lremove);
 	if (x_node == om->lsentinel->next) { // Check if x is first
-		ladd_first(y_node, om->lsentinel);
+		ladd_head(y_node, om->lsentinel);
 		lrelabel(y_node->next, table_size(om->nodes), &om->height, &om->threshold);
 	} else {
 		ladd(x_node->prev, y_node);
@@ -55,7 +55,7 @@ int add_before(OM* om, const char* x, const char* y, size_t y_len) {
 	return SUCCESS;
 }
 
-int add_first(OM* om, const char* x, size_t x_len) {
+int add_head(OM* om, const char* x, size_t x_len) {
 	LNode* x_node = get_node_write_mod(&om->nodes, x, x_len, &lremove);
 	int size = table_size(om->nodes);
 
@@ -63,14 +63,14 @@ int add_first(OM* om, const char* x, size_t x_len) {
 	if (size == 1) {
 		ladd_initial(x_node, om->lsentinel, om->usentinel);
 	} else {
-		ladd_first(x_node, om->lsentinel);
+		ladd_head(x_node, om->lsentinel);
 		lrelabel(x_node->next, size, &om->height, &om->threshold);
 	}
 
 	return SUCCESS;
 }
 
-int add_last(OM* om, const char* x, size_t x_len) {
+int add_tail(OM* om, const char* x, size_t x_len) {
 	LNode* x_node = get_node_write_mod(&om->nodes, x, x_len, &lremove);
 	int size = table_size(om->nodes);
 

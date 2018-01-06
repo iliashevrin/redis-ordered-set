@@ -35,27 +35,27 @@ MU_TEST(test_hash) {
 
 }
 
-MU_TEST(test_add_first) {
+MU_TEST(test_add_head) {
 
-	mu_assert_int_eq(SUCCESS, add_first(om, "foo", 3));
+	mu_assert_int_eq(SUCCESS, add_head(om, "foo", 3));
 	mu_assert_string_eq("foo", om->lsentinel->next->key);
-	mu_assert_int_eq(SUCCESS, add_first(om, "bar!", 4));
+	mu_assert_int_eq(SUCCESS, add_head(om, "bar!", 4));
 	mu_assert_string_eq("bar!", om->lsentinel->next->key);
 
 }
 
-MU_TEST(test_add_last) {
+MU_TEST(test_add_tail) {
 
-	mu_assert_int_eq(SUCCESS, add_last(om, "foo", 3));
+	mu_assert_int_eq(SUCCESS, add_tail(om, "foo", 3));
 	mu_assert_string_eq("foo", om->lsentinel->prev->key);
-	mu_assert_int_eq(SUCCESS, add_last(om, "bar!", 4));
+	mu_assert_int_eq(SUCCESS, add_tail(om, "bar!", 4));
 	mu_assert_string_eq("bar!", om->lsentinel->prev->key);
 
 }
 
 MU_TEST(test_add_after) {
 
-	add_first(om, "foo", 3);
+	add_head(om, "foo", 3);
 	mu_assert_int_eq(SUCCESS, add_after(om, "foo", "bar!", 4));
 	mu_assert_string_eq("bar!", om->lsentinel->next->next->key);
 	mu_assert_int_eq(ELEMENT_NOT_FOUND, add_after(om, "notexist", "new", 3));
@@ -68,7 +68,7 @@ MU_TEST(test_add_after) {
 
 MU_TEST(test_add_before) {
 
-	add_last(om, "foo", 3);
+	add_tail(om, "foo", 3);
 	mu_assert_int_eq(SUCCESS, add_before(om, "foo", "bar!", 4));
 	mu_assert_string_eq("bar!", om->lsentinel->prev->prev->key);
 	mu_assert_int_eq(ELEMENT_NOT_FOUND, add_before(om, "notexist", "new", 3));
@@ -81,7 +81,7 @@ MU_TEST(test_add_before) {
 
 MU_TEST(test_remove) {
 
-	add_first(om, "foo", 3);
+	add_head(om, "foo", 3);
 	add_after(om, "foo", "bar!", 4);
 	add_after(om, "bar!", "baz", 3);
 	mu_assert_int_eq(SUCCESS, remove_item(om, "bar!"));
@@ -93,7 +93,7 @@ MU_TEST(test_remove) {
 
 MU_TEST(test_compare) {
 
-	add_first(om, "foo", 3);
+	add_head(om, "foo", 3);
 	add_after(om, "foo", "bar!", 4);
 	add_after(om, "bar!", "baz", 3);
 	mu_assert_int_eq(-1, compare(om, "foo", "bar!"));
@@ -107,8 +107,8 @@ MU_TEST_SUITE(test_suite) {
 
 	MU_SUITE_CONFIGURE(&test_setup, &test_teardown);
 	MU_RUN_TEST(test_hash);
-	MU_RUN_TEST(test_add_first);
-	MU_RUN_TEST(test_add_last);
+	MU_RUN_TEST(test_add_head);
+	MU_RUN_TEST(test_add_tail);
 	MU_RUN_TEST(test_add_after);
 	MU_RUN_TEST(test_add_before);
 	MU_RUN_TEST(test_remove);

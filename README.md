@@ -1,58 +1,159 @@
 # Redis Ordered Set
-Order Maintenance Set for Redis
+This module implements an Ordered Set data structure in Redis. An Ordered Set, or an order maintenance set, allows for constant time order comparison between members of the set.
 
-This module provides an order maintenance set in Redis, that allows for O(1) order comparison between elements in the set. The implementation based on <a href="http://erikdemaine.org/papers/DietzSleator_ESA2002/paper.pdf">this article</a>, with one level of indirection described in <a href="https://www.cs.cmu.edu/~sleator/papers/maintaining-order.pdf">this article</a>. The indirection allows for amortized O(1) insertion of new elements. The implementation uses an underlying hash table that provides constant time queries of next and previous elements for any given element. Note that these papers describe a data structure which is a list (meaning that duplicates are allowed). However, owing to the fact that we map between command line strings to elements in the structure via a hash table, uniqueness must be mainted, so the structure is eventually a set.
+Like regular Redis Sets and Sorted Sets, members in an Ordered Set are unique. Unlike regular Set but similarly to Sorted Sets, members in an Ordered Set are ordered. Unlike Sorted Sets where order is by score and/or lexicographical, the order of members in an Ordered Set is set when they are created.
+
+## Implementation notes
+
+The implementation is based on [this article](http://erikdemaine.org/papers/DietzSleator_ESA2002/paper.pdf), and employs one level of indirection as described in [this article](https://www.cs.cmu.edu/~sleator/papers/maintaining-order.pdf) enabling an amortized O(1) insertion of new elements. The implementation uses an underlying hash table that provides constant time queries of next and previous elements for any given element.
+
+Note that the mentioned papers describe a data structure that is a list (i.e. duplicates are allowed). However, owing to the fact that we map between command line strings to elements in the structure via a hash table, uniqueness must be mainted, so the structure is eventually a set.
 
 ## Quickstart
 
 In order to use the module simply clone the repo into your machine and run make inside the directory. Then load the module into Redis by adding loadmodule /path/to/orderedset.so into redis.conf file.
 
+Here's an example showing how to use the new data structure:
+
+```
+redis> OM.ADDHEAD my_set foo
+```
+
 ## Commands
 
-#### OM.ADDFIRST key x
+### OM.ADDHEAD key member [member ...]
 
-Inserts x into head of ordered set with key name. Creates structure if does not exist under given key name. All 'add' commands require labeling, hence addfirst runs O(1) amortized and O(logN) worst case time when N is the number of elements in the set.
+> Time complexity: O(N), where N is the number of added members
 
-#### OM.ADDLAST key x
+Adds one or more `member` to the head of an ordered set stored in `key`.
 
-Inserts x into tail of ordered set with key name. Creates structure if does not exist under given key name. All 'add' commands require labeling, hence addlast runs O(1) amortized and O(logN) worst case time when N is the number of elements in the set.
+#### A note about complexity
 
-#### OM.ADDAFTER key x y
+All `OM.ADD*` commands require labeling, hence when adding a single member they demonstrate O(1) amortized time complexity, and O(logN) worst case time where N is the ordered set's cardinality.
 
-Inserts y right after x in ordered set with key name. Returns ERR if key does not exist or if x is not found. All 'add' commands require labeling, hence addafter runs O(1) amortized and O(logN) worst case time when N is the number of elements in the set.
+#### Return value
 
-#### OM.ADDBEFORE key x y
+Integer reply: the number of members added to the ordered set.
 
-Inserts y right before x in ordered set with key name. Returns ERR if key does not exist or if x is not found. All 'add' commands require labeling, hence addbefore runs O(1) amortized and O(logN) worst case time when N is the number of elements in the set.
+### OM.ADDTAIL key member [member ...]
 
-#### OM.REMOVE key x
+> Time complexity: O(N), where N is the number of added members
 
-Removes x from ordered set with key name. Deletes the structure if x was the last element to remove. Returns ERR if key does not exist or if x is not found. Runs O(1) worst case time.
+Adds one or more `member` to the tail of an ordered set stored in `key`.
 
-#### OM.COMPARE key x y
+#### Return value
 
-Compares x and y based on their position in the set with key name. Returns -1 if x is before y, 0 if they are the same, and 1 if x is after y. Returns ERR if key does not exist or if x is not found. Runs O(1) worst case time.
+Integer reply: the number of members added to the ordered set.
 
-#### OM.LIST key
+### OM.ADDAFTER key existing member [member ...]
 
-Lists all elements in the set with key name from head to tail. Returns ERR if key does not exist. Runs O(N) when N is the number of elements in the set.
+> Time complexity: O(N), where N is the number of added members
 
-#### OM.NEXT key x k
+Inserts one or more `member` immediately after the `existing` member in an ordered set stored in `key`.
 
-Lists the next k elements following x in the set with key name. Returns less than k elements if reached the tail of the set. Returns ERR if key does not exist or if x is not found. All query commands take O(k) time when k is the number of elements in the output.
+#### Return value
 
-#### OM.PREV key x k
+Integer reply: the number of members added to the ordered set, or `nil` if `key` does not exist or `existing` is not found in it.
 
-Lists the previous k elements behind x in reverse order in the set with key name. Returns less than k elements if reached the head of the set. Returns ERR if key does not exist or if x is not found. All query commands take O(k) time when k is the number of elements in the output.
+### OM.ADDBEFORE key existing member [member ...]
 
-#### OM.FIRST key k
+> Time complexity: O(N), where N is the number of added members
 
-Lists the first k elements in the set with key name. Returns less than k elements if reached the tail of the set. Returns ERR if key does not exist. All query commands take O(k) time when k is the number of elements in the output.
+Inserts one or more `member` immediately before the `existing` member in an ordered set stored in `key`.
 
-#### OM.LAST key k
+##### Return value
 
-Lists the last k elements in reverse order in the set with key name. Returns less than k elements if reached the head of the set. Returns ERR if key does not exist. All query commands take O(k) time when k is the number of elements in the output.
+Integer reply: the number of members added to the ordered set, or `nil` if `key` does not exist or `existing` is not found in it.
 
-#### OM.SIZE key
+### OM.REM key member [member ...]
 
-Returns the number of elements in the set with key name. Returns ERR if key does not exist. Runs in O(1) worst case time.
+> Time complexity: O(N), where N is the number of removed members
+
+Removes one or more `member` from an ordered set stored in `key`.
+
+#### Return value
+
+Integer reply: the number of members removed from the ordered set, or `nil` if `key` does not exist.
+
+### OM.COMPARE key member1 member2
+
+> Time complexity: O(1)
+
+Compares the position of `member1` and `member2` in an ordered set stored in `key`.
+
+#### Return value
+
+Integer reply: a number represeting the comparison's result, specifically:
+
+* **-1** when `member1` is before `member2`
+* **0** when `member1` is identical to `member2` <- i.e. `om.compare k foo foo`
+* **1** when `member1` is after `member2`
+* **nil** when `key` does not exist, and when `member1` or `member2` are not found in it
+
+### OM.MEMBERS key
+
+> Time complexity: O(N), where N is the ordered set's cardinality
+
+Returns all members from head to tail in the ordered set stored in `key`.
+
+#### Return value
+
+Array reply: all members of the ordered set.
+
+### OM.NEXT key member count
+
+> Time complexity: O(N), where N is the members count
+
+Returns up to `count` members that follow `member` in the ordered set stored in `key` .
+
+`count` may be any positive integer, and when set to **0** all members until the tail are returned. This operation will return less than `count` members if the tail is encountered prematurely.
+
+#### Return value
+
+Array reply: the members in the ordered set.
+
+### OM.PREV key member count
+
+> Time complexity: O(N), where N is the members count
+
+Returns in reverse order up to  `count` members that precede `member` in the ordered set stored in `key` .
+
+`count` may be any positive integer, and when set to **0** all members up to the head are returned. This operation will return less than `count` members if the head is encountered prematurely.
+
+#### Return value
+
+Array reply: the members in the ordered set in reverse order.
+
+### OM.HEAD key count
+
+> Time complexity: O(N), where N is the members count
+
+Returns up to `count` members from the head of the ordered set stored in `key` .
+
+`count` may be any positive integer, and when set to **0** all members until the tail are returned. This operation will return less than `count` members if the tail is encountered prematurely.
+
+#### Return value
+
+Array reply: the members in the ordered set.
+
+### OM.TAIL key count
+
+> Time complexity: O(N), where N is the members count
+
+Returns in reverse order up to `count` members from the tail of the ordered set stored in `key` .
+
+`count` may be any positive integer, and when set to **0** all members until the head are returned. This operation will return less than `count` members if the head is encountered prematurely.
+
+#### Return value
+
+Array reply: the members in the ordered set in reverse order.
+
+### OM.CARD key
+
+> Time complexity: O(1)
+
+Returns the cardinality (number of members) of the ordered set stored in `key` .
+
+#### Return value
+
+Integer reply: the cardinality (number of elements) of the set, or `0` if `key` does not exist
