@@ -30,7 +30,7 @@ void* OSRdbLoad(RedisModuleIO *io, int encver) {
 
     RedisOS* redis_os = OSInit();
     OrderedSet* os = redis_os->oset;
-    int size = RedisModule_LoadUnsigned(io);
+    size_t size = RedisModule_LoadUnsigned(io);
     os->height = RedisModule_LoadUnsigned(io);
     os->threshold = RedisModule_LoadDouble(io);
     UNode* curr_upper;
@@ -43,7 +43,6 @@ void* OSRdbLoad(RedisModuleIO *io, int encver) {
         curr_upper = RedisModule_Alloc(sizeof(UNode));
         curr_upper->label = RedisModule_LoadUnsigned(io);
         curr_upper->lsize = RedisModule_LoadUnsigned(io);
-        printf("loading upper %lu %d\n", curr_upper->label, curr_upper->lsize);
         curr_upper->prev = prev_upper;
         prev_upper->next = curr_upper;
 
@@ -57,8 +56,6 @@ void* OSRdbLoad(RedisModuleIO *io, int encver) {
             curr_lower->prev = prev_lower;
             curr_lower->upper = curr_upper;
             prev_lower->next = curr_lower;
-
-            printf("loading lower %lu %s %d\n", curr_lower->label, curr_lower->key, curr_lower->keylen);
 
             if (j == 0) {
                 curr_upper->lower = curr_lower;
@@ -77,8 +74,7 @@ void* OSRdbLoad(RedisModuleIO *io, int encver) {
     os->usentinel->prev = prev_upper;
     prev_lower->next = os->lsentinel;
     os->lsentinel->prev = prev_lower;
-
-    return os;
+    return redis_os;
 }
 
 void OSRdbSave(RedisModuleIO *io, void *obj) {
@@ -95,11 +91,9 @@ void OSRdbSave(RedisModuleIO *io, void *obj) {
     while (curr_upper != os->usentinel) {
         RedisModule_SaveUnsigned(io, curr_upper->label);
         RedisModule_SaveUnsigned(io, curr_upper->lsize);
-        printf("saving upper %lu %d\n", curr_upper->label, curr_upper->lsize);
         curr_lower = curr_upper->lower;
 
         while (curr_lower->upper == curr_upper) {
-            printf("saving lower %lu %s %d\n", curr_lower->label, curr_lower->key, curr_lower->keylen);
             RedisModule_SaveUnsigned(io, curr_lower->label);
             RedisModule_SaveStringBuffer(io, curr_lower->key, curr_lower->keylen);
             curr_lower = curr_lower->next;
