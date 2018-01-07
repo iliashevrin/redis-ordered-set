@@ -1,24 +1,37 @@
 #include "om_module.h"
 
-static RedisModuleType *OMType;
+static RedisModuleType *RedisOSType;
 
-static int getOM(RedisModuleKey* key, OM** om) {
+static LNode* getNodeFromHash(Node** hash, RedisModuleString* key, size_t* ret_count) {
+    size_t member_len;
+    const char* member_str = RedisModule_StringPtrLen(key, &member_len);
+    LNode* member = HASH_get_node(*hash, member_str);
+    if (member == NULL) {
+        member = HASH_create_node(hash, member_str, member_len);
+        ++(*ret_count);
+    } else { // If already found remove from structure
+        OSET_remove(member);
+    }
+    return member;
+}
 
-    *om = NULL;
+static int getOS(RedisModuleKey* key, RedisOS** os) {
+
+    *os = NULL;
     int type = RedisModule_KeyType(key);
     if (REDISMODULE_KEYTYPE_EMPTY == type) {
-        return GET_OM_NOT_EXIST;
-    } else if (RedisModule_ModuleTypeGetType(key) != OMType) {
-        return GET_OM_WRONG_TYPE;
+        return GET_OS_NOT_EXIST;
+    } else if (RedisModule_ModuleTypeGetType(key) != RedisOSType) {
+        return GET_OS_WRONG_TYPE;
     } else {
-        *om = RedisModule_ModuleTypeGetValue(key);
-        return GET_OM_SUCCESS;
+        *os = RedisModule_ModuleTypeGetValue(key);
+        return GET_OS_SUCCESS;
     }
 }
 
-static int OMAddAfter_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OSAddAfter_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
-    if (argc != 4) {
+    if (argc < 4) {
         RedisModule_WrongArity(ctx);
         return REDISMODULE_ERR;
     }
@@ -26,39 +39,44 @@ static int OMAddAfter_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv
     RedisModule_AutoMemory(ctx);
     RedisModule_ReplicateVerbatim(ctx);
 
-    OM* om;
-    int result = getOM(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE), &om);
+    RedisOS* os;
+    int result = getOS(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE), &os);
 
-    if (result == GET_OM_WRONG_TYPE) {
+    if (result == GET_OS_WRONG_TYPE) {
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
-    } else if (result == GET_OM_NOT_EXIST) {
+    } else if (result == GET_OS_NOT_EXIST) {
         RedisModule_ReplyWithNull(ctx);
         return REDISMODULE_OK;
     }
 
-    if (RedisModule_StringCompare(argv[2], argv[3]) == 0) {
-        RedisModule_ReplyWithSimpleString(ctx, "OK");
-        return REDISMODULE_OK;
-    }
-
-    size_t x_len, y_len;
-    const char* x = RedisModule_StringPtrLen(argv[2], &x_len);
-    const char* y = RedisModule_StringPtrLen(argv[3], &y_len);
-    int add_result = add_after(om, x, y, y_len);
-
-    if (add_result == ELEMENT_NOT_FOUND) {
+    size_t existing_len;
+    const char* existing_str = RedisModule_StringPtrLen(argv[2], &existing_len);
+    LNode* existing = HASH_get_node(os->hash, existing_str);
+    if (existing == NULL) {
         RedisModule_ReplyWithNull(ctx);
         return REDISMODULE_OK;
     }
 
-    RedisModule_ReplyWithSimpleString(ctx, "OK");
+    LNode* member;
+    size_t added = 0;
+
+    for (size_t i = 3; i < argc; ++i) {
+        // No point adding element right after itself
+        if (RedisModule_StringCompare(argv[i-1], argv[i]) != 0) {
+            member = getNodeFromHash(&os->hash, argv[i], &added);
+            OSET_add_after(os->oset, existing, member, HASH_table_size(os->hash));
+            existing = member;
+        }
+    }
+
+    RedisModule_ReplyWithLongLong(ctx, added);
     return REDISMODULE_OK;
 }
 
-static int OMAddBefore_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OSAddBefore_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
-    if (argc != 4) {
+    if (argc < 4) {
         RedisModule_WrongArity(ctx);
         return REDISMODULE_ERR;
     }
@@ -66,39 +84,47 @@ static int OMAddBefore_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **arg
     RedisModule_AutoMemory(ctx);
     RedisModule_ReplicateVerbatim(ctx);
 
-    OM* om;
-    int result = getOM(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE), &om);
+    RedisOS* os;
+    int result = getOS(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE), &os);
 
-    if (result == GET_OM_WRONG_TYPE) {
+    if (result == GET_OS_WRONG_TYPE) {
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
-    } else if (result == GET_OM_NOT_EXIST) {
+    } else if (result == GET_OS_NOT_EXIST) {
         RedisModule_ReplyWithNull(ctx);
         return REDISMODULE_OK;
     }
 
-    if (RedisModule_StringCompare(argv[2], argv[3]) == 0) {
-        RedisModule_ReplyWithSimpleString(ctx, "OK");
-        return REDISMODULE_OK;
-    }
-
-    size_t x_len, y_len;
-    const char* x = RedisModule_StringPtrLen(argv[2], &x_len);
-    const char* y = RedisModule_StringPtrLen(argv[3], &y_len);
-    int add_result = add_before(om, x, y, y_len);
-
-    if (add_result == ELEMENT_NOT_FOUND) {
+    size_t existing_len;
+    const char* existing_str = RedisModule_StringPtrLen(argv[2], &existing_len);
+    LNode* existing = HASH_get_node(os->hash, existing_str);
+    if (existing == NULL) {
         RedisModule_ReplyWithNull(ctx);
         return REDISMODULE_OK;
     }
-    RedisModule_ReplyWithSimpleString(ctx, "OK");
+
+    size_t added = 0;
+    LNode* member = getNodeFromHash(&os->hash, argv[3], &added);
+    OSET_add_before(os->oset, existing, member, HASH_table_size(os->hash));
+    existing = member;
+
+    for (size_t i = 4; i < argc; ++i) {
+        // No point adding element right after itself
+        if (RedisModule_StringCompare(argv[i-1], argv[i]) != 0) {
+            member = getNodeFromHash(&os->hash, argv[i], &added);
+            OSET_add_after(os->oset, existing, member, HASH_table_size(os->hash));
+            existing = member;
+        }
+    }
+
+    RedisModule_ReplyWithLongLong(ctx, added);
     return REDISMODULE_OK;
     
 }
 
-static int OMRemove_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OSRemove_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
-    if (argc != 3) {
+    if (argc < 3) {
         RedisModule_WrongArity(ctx);
         return REDISMODULE_ERR;
     }
@@ -106,38 +132,44 @@ static int OMRemove_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, 
     RedisModule_AutoMemory(ctx);
     RedisModule_ReplicateVerbatim(ctx);
 
-    OM* om;
+    RedisOS* os;
     RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
-    int result = getOM(key, &om);
+    int result = getOS(key, &os);
 
-    if (result == GET_OM_WRONG_TYPE) {
+    if (result == GET_OS_WRONG_TYPE) {
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
-    } else if (result == GET_OM_NOT_EXIST) {
+    } else if (result == GET_OS_NOT_EXIST) {
         RedisModule_ReplyWithNull(ctx);
         return REDISMODULE_OK;
     }
 
-    size_t x_len;
-    const char* x = RedisModule_StringPtrLen(argv[2], &x_len);
-    int remove_result = remove_item(om, x);
+    size_t removed = 0;
 
-    if (remove_result == ELEMENT_NOT_FOUND) {
-        RedisModule_ReplyWithNull(ctx);
-        return REDISMODULE_OK;
+    for (size_t i = 2; i < argc; ++i) {
+        size_t existing_len;
+        const char* existing_str = RedisModule_StringPtrLen(argv[i], &existing_len);
+        LNode* existing = HASH_get_node(os->hash, existing_str);
+        if (existing != NULL) {
+            HASH_remove_node(&os->hash, existing_str);
+            OSET_remove(existing);
+            ++removed;
+
+            // Removed last node so we delete structure from redis keyset
+            if (!HASH_table_size(os->hash)) {
+                RedisModule_DeleteKey(key);
+                break;
+            }
+        }
     }
 
-    if (remove_result == LIST_EMPTY) {
-        RedisModule_DeleteKey(key);
-    }
-
-    RedisModule_ReplyWithSimpleString(ctx, "OK");
+    RedisModule_ReplyWithLongLong(ctx, removed);
     return REDISMODULE_OK;
 }
 
-static int OMAddHead_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OSAddHead_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
-    if (argc != 3) {
+    if (argc < 3) {
         RedisModule_WrongArity(ctx);
         return REDISMODULE_ERR;
     }
@@ -145,28 +177,39 @@ static int OMAddHead_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv,
     RedisModule_AutoMemory(ctx);
     RedisModule_ReplicateVerbatim(ctx);
 
-    OM* om;
+    RedisOS* os;
     RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
-    int result = getOM(key, &om);
+    int result = getOS(key, &os);
 
-    if (result == GET_OM_WRONG_TYPE) {
+    if (result == GET_OS_WRONG_TYPE) {
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
-    } else if (result == GET_OM_NOT_EXIST) {
-        om = OMInit();
-        RedisModule_ModuleTypeSetValue(key, OMType, om);
+    } else if (result == GET_OS_NOT_EXIST) {
+        os = OSInit();
+        RedisModule_ModuleTypeSetValue(key, RedisOSType, os);
     }
 
-    size_t x_len;
-    const char* x = RedisModule_StringPtrLen(argv[2], &x_len);
-    add_head(om, x, x_len);
-    RedisModule_ReplyWithSimpleString(ctx, "OK");
+    size_t added = 0;
+    LNode* member = getNodeFromHash(&os->hash, argv[2], &added);
+    OSET_add_head(os->oset, member, HASH_table_size(os->hash));
+    LNode* existing = member;
+
+    for (size_t i = 3; i < argc; ++i) {
+        // No point adding element right after itself
+        if (RedisModule_StringCompare(argv[i-1], argv[i]) != 0) {
+            member = getNodeFromHash(&os->hash, argv[i], &added);
+            OSET_add_after(os->oset, existing, member, HASH_table_size(os->hash));
+            existing = member;
+        }
+    }
+
+    RedisModule_ReplyWithLongLong(ctx, added);
     return REDISMODULE_OK;
 }
 
-static int OMAddTail_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OSAddTail_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
-    if (argc != 3) {
+    if (argc < 3) {
         RedisModule_WrongArity(ctx);
         return REDISMODULE_ERR;
     }
@@ -174,26 +217,37 @@ static int OMAddTail_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv,
     RedisModule_AutoMemory(ctx);
     RedisModule_ReplicateVerbatim(ctx);
 
-    OM* om;
+    RedisOS* os;
     RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
-    int result = getOM(key, &om);
+    int result = getOS(key, &os);
 
-    if (result == GET_OM_WRONG_TYPE) {
+    if (result == GET_OS_WRONG_TYPE) {
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
-    } else if (result == GET_OM_NOT_EXIST) {
-        om = OMInit();
-        RedisModule_ModuleTypeSetValue(key, OMType, om);
+    } else if (result == GET_OS_NOT_EXIST) {
+        os = OSInit();
+        RedisModule_ModuleTypeSetValue(key, RedisOSType, os);
     }
 
-    size_t x_len;
-    const char* x = RedisModule_StringPtrLen(argv[2], &x_len);
-    add_tail(om, x, x_len);
-    RedisModule_ReplyWithSimpleString(ctx, "OK");
+    size_t added = 0;
+    LNode* member = getNodeFromHash(&os->hash, argv[2], &added);
+    OSET_add_tail(os->oset, member, HASH_table_size(os->hash));
+    LNode* existing = member;
+
+    for (size_t i = 3; i < argc; ++i) {
+        // No point adding element right after itself
+        if (RedisModule_StringCompare(argv[i-1], argv[i]) != 0) {
+            member = getNodeFromHash(&os->hash, argv[i], &added);
+            OSET_add_after(os->oset, existing, member, HASH_table_size(os->hash));
+            existing = member;
+        }
+    }
+
+    RedisModule_ReplyWithLongLong(ctx, added);
     return REDISMODULE_OK;
 }
 
-static int OMCompare_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OSCompare_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
     if (argc != 4) {
         RedisModule_WrongArity(ctx);
@@ -202,37 +256,34 @@ static int OMCompare_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv,
 
     RedisModule_AutoMemory(ctx);
 
-    OM* om;
-    int result = getOM(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ), &om);
+    RedisOS* os;
+    int result = getOS(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ), &os);
 
-    if (result == GET_OM_WRONG_TYPE) {
+    if (result == GET_OS_WRONG_TYPE) {
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
-    } else if (result == GET_OM_NOT_EXIST) {
+    } else if (result == GET_OS_NOT_EXIST) {
         RedisModule_ReplyWithNull(ctx);
         return REDISMODULE_OK;
     }
 
-    if (RedisModule_StringCompare(argv[2], argv[3]) == 0) {
-        RedisModule_ReplyWithLongLong(ctx, 0);
-        return REDISMODULE_OK;
-    }
+    size_t x_len;
+    const char* x_str = RedisModule_StringPtrLen(argv[2], &x_len);
+    size_t y_len;
+    const char* y_str = RedisModule_StringPtrLen(argv[3], &y_len);
+    LNode* x = HASH_get_node(os->hash, x_str);
+    LNode* y = HASH_get_node(os->hash, y_str);
 
-    size_t x_len, y_len;
-    const char* x = RedisModule_StringPtrLen(argv[2], &x_len);
-    const char* y = RedisModule_StringPtrLen(argv[3], &y_len);
-    int cmp_result = compare(om, x, y);
-
-    if (cmp_result == ELEMENT_NOT_FOUND) {
+    if (x == NULL || y == NULL) {
         RedisModule_ReplyWithNull(ctx);
         return REDISMODULE_OK;
     }
 
-    RedisModule_ReplyWithLongLong(ctx, cmp_result);
+    RedisModule_ReplyWithLongLong(ctx, OSET_compare(x, y));
     return REDISMODULE_OK;
 }
 
-static int OMNext_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OSNext_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
     if (argc != 4) {
         RedisModule_WrongArity(ctx);
@@ -241,20 +292,20 @@ static int OMNext_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
 
     RedisModule_AutoMemory(ctx);
 
-    OM* om;
-    int result = getOM(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ), &om);
+    RedisOS* os;
+    int result = getOS(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ), &os);
 
-    if (result == GET_OM_WRONG_TYPE) {
+    if (result == GET_OS_WRONG_TYPE) {
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
-    } else if (result == GET_OM_NOT_EXIST) {
+    } else if (result == GET_OS_NOT_EXIST) {
         RedisModule_ReplyWithArray(ctx, 0);
         return REDISMODULE_OK;
     }
 
-    size_t x_len;
-    const char* x = RedisModule_StringPtrLen(argv[2], &x_len);
-    LNode* curr = get_node_read_mod(om->nodes, x);
+    size_t curr_len;
+    const char* curr_str = RedisModule_StringPtrLen(argv[2], &curr_len);
+    LNode* curr = HASH_get_node(os->hash, curr_str);
 
     long long ll;
     long arr_len = 0;
@@ -264,19 +315,19 @@ static int OMNext_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
         RedisModule_ReplyWithArray(ctx, 0);
         return REDISMODULE_OK;
     } else if (long_result == REDISMODULE_ERR || ll < 0) {
-        RedisModule_ReplyWithError(ctx, OM_INVALID_COUNT);
+        RedisModule_ReplyWithError(ctx, OS_INVALID_COUNT);
         return REDISMODULE_ERR;
     }
 
     if (ll == 0) {
-        ll = table_size(om->nodes);
+        ll = HASH_table_size(os->hash);
     }
 
     RedisModule_ReplyWithArray(ctx, REDISMODULE_POSTPONED_ARRAY_LEN);
 
     for (size_t i = 0; i < ll; ++i) {
         curr = curr->next;
-        if (curr == om->lsentinel) {
+        if (curr == LSENTINEL) {
             break;
         }
         ++arr_len;
@@ -287,7 +338,7 @@ static int OMNext_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
     return REDISMODULE_OK;
 }
 
-static int OMPrev_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OSPrev_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
     if (argc != 4) {
         RedisModule_WrongArity(ctx);
@@ -296,20 +347,20 @@ static int OMPrev_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
 
     RedisModule_AutoMemory(ctx);
 
-    OM* om;
-    int result = getOM(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ), &om);
+    RedisOS* os;
+    int result = getOS(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ), &os);
 
-    if (result == GET_OM_WRONG_TYPE) {
+    if (result == GET_OS_WRONG_TYPE) {
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
-    } else if (result == GET_OM_NOT_EXIST) {
+    } else if (result == GET_OS_NOT_EXIST) {
         RedisModule_ReplyWithArray(ctx, 0);
         return REDISMODULE_OK;
     }
 
-    size_t x_len;
-    const char* x = RedisModule_StringPtrLen(argv[2], &x_len);
-    LNode* curr = get_node_read_mod(om->nodes, x);
+    size_t curr_len;
+    const char* curr_str = RedisModule_StringPtrLen(argv[2], &curr_len);
+    LNode* curr = HASH_get_node(os->hash, curr_str);
 
     long long ll;
     long arr_len = 0;
@@ -319,19 +370,19 @@ static int OMPrev_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
         RedisModule_ReplyWithArray(ctx, 0);
         return REDISMODULE_OK;
     } else if (long_result == REDISMODULE_ERR || ll < 0) {
-        RedisModule_ReplyWithError(ctx, OM_INVALID_COUNT);
+        RedisModule_ReplyWithError(ctx, OS_INVALID_COUNT);
         return REDISMODULE_ERR;
     }
 
     if (ll == 0) {
-        ll = table_size(om->nodes);
+        ll = HASH_table_size(os->hash);
     }
 
     RedisModule_ReplyWithArray(ctx, REDISMODULE_POSTPONED_ARRAY_LEN);
 
     for (size_t i = 0; i < ll; ++i) {
         curr = curr->prev;
-        if (curr == om->lsentinel) {
+        if (curr == LSENTINEL) {
             break;
         }
         ++arr_len;
@@ -342,7 +393,7 @@ static int OMPrev_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
     return REDISMODULE_OK;
 }
 
-static int OMHead_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OSHead_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
     if (argc != 3) {
         RedisModule_WrongArity(ctx);
@@ -351,30 +402,30 @@ static int OMHead_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
 
     RedisModule_AutoMemory(ctx);
 
-    OM* om;
-    int result = getOM(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ), &om);
+    RedisOS* os;
+    int result = getOS(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ), &os);
 
-    if (result == GET_OM_WRONG_TYPE) {
+    if (result == GET_OS_WRONG_TYPE) {
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
-    } else if (result == GET_OM_NOT_EXIST) {
+    } else if (result == GET_OS_NOT_EXIST) {
         RedisModule_ReplyWithArray(ctx, 0);
         return REDISMODULE_OK;
     }
 
-    LNode* curr = om->lsentinel->next;
+    LNode* curr = LSENTINEL->next;
 
     long long ll;
     long arr_len = 0;
     int long_result = RedisModule_StringToLongLong(argv[2], &ll);
 
     if (long_result == REDISMODULE_ERR || ll < 0) {
-        RedisModule_ReplyWithError(ctx, OM_INVALID_COUNT);
+        RedisModule_ReplyWithError(ctx, OS_INVALID_COUNT);
         return REDISMODULE_ERR;
     }
 
     if (ll == 0) {
-        ll = table_size(om->nodes);
+        ll = HASH_table_size(os->hash);
     }
 
     RedisModule_ReplyWithArray(ctx, REDISMODULE_POSTPONED_ARRAY_LEN);
@@ -383,7 +434,7 @@ static int OMHead_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
         RedisModule_ReplyWithStringBuffer(ctx, curr->key, curr->keylen);
         ++arr_len;
         curr = curr->next;
-        if (curr == om->lsentinel) {
+        if (curr == LSENTINEL) {
             break;
         }
     }
@@ -392,7 +443,7 @@ static int OMHead_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
     return REDISMODULE_OK;
 }
 
-static int OMTail_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OSTail_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
     if (argc != 3) {
         RedisModule_WrongArity(ctx);
@@ -401,30 +452,30 @@ static int OMTail_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
 
     RedisModule_AutoMemory(ctx);
 
-    OM* om;
-    int result = getOM(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ), &om);
+    RedisOS* os;
+    int result = getOS(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ), &os);
 
-    if (result == GET_OM_WRONG_TYPE) {
+    if (result == GET_OS_WRONG_TYPE) {
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
-    } else if (result == GET_OM_NOT_EXIST) {
+    } else if (result == GET_OS_NOT_EXIST) {
         RedisModule_ReplyWithArray(ctx, 0);
         return REDISMODULE_OK;
     }
 
-    LNode* curr = om->lsentinel->prev;
+    LNode* curr = LSENTINEL->prev;
 
     long long ll;
     long arr_len = 0;
     int long_result = RedisModule_StringToLongLong(argv[2], &ll);
 
     if (long_result == REDISMODULE_ERR || ll < 0) {
-        RedisModule_ReplyWithError(ctx, OM_INVALID_COUNT);
+        RedisModule_ReplyWithError(ctx, OS_INVALID_COUNT);
         return REDISMODULE_ERR;
     }
 
     if (ll == 0) {
-        ll = table_size(om->nodes);
+        ll = HASH_table_size(os->hash);
     }
 
     RedisModule_ReplyWithArray(ctx, REDISMODULE_POSTPONED_ARRAY_LEN);
@@ -433,7 +484,7 @@ static int OMTail_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
         RedisModule_ReplyWithStringBuffer(ctx, curr->key, curr->keylen);
         ++arr_len;
         curr = curr->prev;
-        if (curr == om->lsentinel) {
+        if (curr == LSENTINEL) {
             break;
         }
     }
@@ -442,7 +493,7 @@ static int OMTail_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
     return REDISMODULE_OK;
 }
 
-static int OMMembers_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OSMembers_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
     if (argc != 2) {
         RedisModule_WrongArity(ctx);
@@ -451,19 +502,19 @@ static int OMMembers_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv,
 
     RedisModule_AutoMemory(ctx);
 
-    OM* om;
-    int result = getOM(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ), &om);
+    RedisOS* os;
+    int result = getOS(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ), &os);
 
-    if (result == GET_OM_WRONG_TYPE) {
+    if (result == GET_OS_WRONG_TYPE) {
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
-    } else if (result == GET_OM_NOT_EXIST) {
+    } else if (result == GET_OS_NOT_EXIST) {
         RedisModule_ReplyWithArray(ctx, 0);
         return REDISMODULE_OK;
     }
 
-    size_t size = table_size(om->nodes);
-    LNode* curr = om->lsentinel->next;
+    size_t size = HASH_table_size(os->hash);
+    LNode* curr = LSENTINEL->next;
     RedisModule_ReplyWithArray(ctx, size);
 
     for (size_t i = 0; i < size; ++i) {
@@ -474,7 +525,7 @@ static int OMMembers_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv,
     return REDISMODULE_OK;
 }
 
-static int OMCard_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int OSCard_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
     if (argc != 2) {
         RedisModule_WrongArity(ctx);
@@ -483,18 +534,18 @@ static int OMCard_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
 
     RedisModule_AutoMemory(ctx);
 
-    OM* om;
-    int result = getOM(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ), &om);
+    RedisOS* os;
+    int result = getOS(RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ), &os);
 
-    if (result == GET_OM_WRONG_TYPE) {
+    if (result == GET_OS_WRONG_TYPE) {
         RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
         return REDISMODULE_ERR;
-    } else if (result == GET_OM_NOT_EXIST) {
+    } else if (result == GET_OS_NOT_EXIST) {
         RedisModule_ReplyWithLongLong(ctx, 0);
         return REDISMODULE_OK;
     }
 
-    RedisModule_ReplyWithLongLong(ctx, table_size(om->nodes));
+    RedisModule_ReplyWithLongLong(ctx, HASH_table_size(os->hash));
     return REDISMODULE_OK;
 }
 
@@ -503,49 +554,49 @@ int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) 
         return REDISMODULE_ERR;
     }
 
-    if (RedisModule_CreateCommand(ctx, "OM.ADDAFTER", OMAddAfter_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OS.ADDAFTER", OSAddAfter_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
-    if (RedisModule_CreateCommand(ctx, "OM.ADDBEFORE", OMAddBefore_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OS.ADDBEFORE", OSAddBefore_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
-    if (RedisModule_CreateCommand(ctx, "OM.REM", OMRemove_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OS.REM", OSRemove_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
-    if (RedisModule_CreateCommand(ctx, "OM.COMPARE", OMCompare_RedisCommand, "readonly fast", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OS.COMPARE", OSCompare_RedisCommand, "readonly fast", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
-    if (RedisModule_CreateCommand(ctx, "OM.ADDHEAD", OMAddHead_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OS.ADDHEAD", OSAddHead_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
-    if (RedisModule_CreateCommand(ctx, "OM.ADDTAIL", OMAddTail_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OS.ADDTAIL", OSAddTail_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
-    if (RedisModule_CreateCommand(ctx, "OM.NEXT", OMNext_RedisCommand, "readonly", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OS.NEXT", OSNext_RedisCommand, "readonly", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
-    if (RedisModule_CreateCommand(ctx, "OM.PREV", OMPrev_RedisCommand, "readonly", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OS.PREV", OSPrev_RedisCommand, "readonly", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
-    if (RedisModule_CreateCommand(ctx, "OM.HEAD", OMHead_RedisCommand, "readonly", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OS.HEAD", OSHead_RedisCommand, "readonly", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
-    if (RedisModule_CreateCommand(ctx, "OM.TAIL", OMTail_RedisCommand, "readonly", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OS.TAIL", OSTail_RedisCommand, "readonly", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
-    if (RedisModule_CreateCommand(ctx, "OM.MEMBERS", OMMembers_RedisCommand, "readonly", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OS.MEMBERS", OSMembers_RedisCommand, "readonly", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
-    if (RedisModule_CreateCommand(ctx, "OM.CARD", OMCard_RedisCommand, "readonly fast", 1, 1, 1) != REDISMODULE_OK) {
+    if (RedisModule_CreateCommand(ctx, "OS.CARD", OSCard_RedisCommand, "readonly fast", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
 
     static RedisModuleTypeMethods type_methods = {.version = REDISMODULE_TYPE_METHOD_VERSION,
-                                               .rdb_load = OMRdbLoad,
-                                               .rdb_save = OMRdbSave,
-                                               .aof_rewrite = OMAofRewrite,
-                                               .free = OMFree,
-                                               .mem_usage = OMMemUsage};
-    OMType = RedisModule_CreateDataType(ctx, "OM-iliash", OM_ENCODING_VERSION, &type_methods);
-    return OMType == NULL ? REDISMODULE_ERR : REDISMODULE_OK;
+                                               .rdb_load = OSRdbLoad,
+                                               .rdb_save = OSRdbSave,
+                                               .aof_rewrite = OSAofRewrite,
+                                               .free = OSFree,
+                                               .mem_usage = OSMemUsage};
+    RedisOSType = RedisModule_CreateDataType(ctx, "OS-iliash", OS_ENCODING_VERSION, &type_methods);
+    return RedisOSType == NULL ? REDISMODULE_ERR : REDISMODULE_OK;
 }

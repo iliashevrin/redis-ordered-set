@@ -79,7 +79,7 @@ static UNode* uadd(UNode* this, LNode* lower, size_t* height, double* threshold)
     	new_node->label = this->label + 1;
     } else {
         if (this->label + 1 == new_node->next->label) {
-           urelabel(this, new_node, height, threshold);
+            urelabel(this, new_node, height, threshold);
         } else {
             new_node->label = (this->label + new_node->next->label) >> 1;
         }
@@ -137,7 +137,7 @@ static inline void linit(LNode* node, unsigned long long label, LNode* next, LNo
     node->upper = upper;
 }
 
-void lrelabel(LNode* this, const size_t size, size_t* height, double* threshold) {
+static void lrelabel(LNode* this, const size_t size, size_t* height, double* threshold) {
     if (this->next->upper == this->upper) {
         if (this->label + 1 == this->next->label) {
             // In this case list size should be approx O(logN)
@@ -156,7 +156,7 @@ void lrelabel(LNode* this, const size_t size, size_t* height, double* threshold)
     }
 }
 
-void ladd_initial(LNode* x, LNode* lsentinel, UNode* usentinel) {
+static inline void ladd_initial(LNode* x, LNode* lsentinel, UNode* usentinel) {
     UNode* initial_upper = uadd_initial(usentinel);
     linit(x, 0, lsentinel, lsentinel, initial_upper);
     ++(x->upper->lsize);
@@ -166,7 +166,7 @@ void ladd_initial(LNode* x, LNode* lsentinel, UNode* usentinel) {
     lsentinel->prev = x;
 }
 
-void ladd_head(LNode* x, LNode* lsentinel) {
+static inline void ladd_head(LNode* x, LNode* lsentinel) {
     LNode* first = lsentinel->next;
     linit(x, first->label, first, lsentinel, first->upper);
     ++(x->upper->lsize);
@@ -177,7 +177,7 @@ void ladd_head(LNode* x, LNode* lsentinel) {
     lsentinel->next = x;
 }
 
-void ladd(LNode* x, LNode* y) {
+static inline void ladd(LNode* x, LNode* y) {
     linit(y, x->label, x->next, x, x->upper);
     ++(x->upper->lsize);
 
@@ -185,7 +185,7 @@ void ladd(LNode* x, LNode* y) {
     x->next = y;
 }
 
-void lremove(LNode* x) {
+void OSET_remove(LNode* x) {
 
     --(x->upper->lsize);
     // List is done, need to delete upper label
@@ -201,4 +201,61 @@ void lremove(LNode* x) {
 
     x->next->prev = x->prev;
     x->prev->next = x->next;
+}
+
+int OSET_compare(LNode* x_node, LNode* y_node) {
+
+    if (x_node->upper->label > y_node->upper->label) {
+        return 1;
+    } else if (x_node->upper->label < y_node->upper->label) {
+        return -1;
+    } else {
+        if (x_node->label > y_node->label) {
+            return 1;
+        } else if (x_node->label < y_node->label) {
+            return -1;
+        } else {
+            return 0;
+        }
+    }
+}
+
+void OSET_add_after(OrderedSet* oset, LNode* x_node, LNode* y_node, const size_t size) {
+
+    ladd(x_node, y_node);
+    lrelabel(y_node, size, &oset->height, &oset->threshold);
+}
+
+void OSET_add_before(OrderedSet* oset, LNode* x_node, LNode* y_node, const size_t size) {
+
+    // Check if x is first
+    if (x_node == oset->lsentinel->next) {
+        ladd_head(y_node, oset->lsentinel);
+        lrelabel(y_node->next, size, &oset->height, &oset->threshold);
+    } else {
+        ladd(x_node->prev, y_node);
+        lrelabel(y_node, size, &oset->height, &oset->threshold);
+    }
+}
+
+void OSET_add_head(OrderedSet* oset, LNode* x_node, const size_t size) {
+
+    // If size is one add first and add last are the same
+    if (size == 1) {
+        ladd_initial(x_node, oset->lsentinel, oset->usentinel);
+    } else {
+        ladd_head(x_node, oset->lsentinel);
+        lrelabel(x_node->next, size, &oset->height, &oset->threshold);
+    }
+}
+
+void OSET_add_tail(OrderedSet* oset, LNode* x_node, const size_t size) {
+
+    // If size is one add first and add last are the same
+    if (size == 1) {
+        ladd_initial(x_node, oset->lsentinel, oset->usentinel);
+    } else {
+        ladd(oset->lsentinel->prev, x_node);
+        lrelabel(x_node, size, &oset->height, &oset->threshold);
+    }
 }

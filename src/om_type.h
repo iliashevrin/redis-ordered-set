@@ -2,17 +2,23 @@
 #define __OM_TYPE_H__
 
 #include "redismodule.h"
-#include "om_api.h"
+#include "om_internal.h"
+#include "om_hash.h"
 
-#define OM_ENCODING_VERSION 1
+#define OS_ENCODING_VERSION 1
 #define INITIAL_THRESHOLD 1.3
 
-void* OMRdbLoad(RedisModuleIO*, int);
-void OMRdbSave(RedisModuleIO*, void*);
-void OMAofRewrite(RedisModuleIO*, RedisModuleString*, void*);
-void OMFree(void*);
-size_t OMMemUsage(const void*);
-OM* OMInit();
+typedef struct {
+	Node* hash; // The hash table
+	OrderedSet* oset; // The linked ordered set
+} RedisOS;
+
+void* OSRdbLoad(RedisModuleIO*, int);
+void OSRdbSave(RedisModuleIO*, void*);
+void OSAofRewrite(RedisModuleIO*, RedisModuleString*, void*);
+void OSFree(void*);
+size_t OSMemUsage(const void*);
+RedisOS* OSInit();
 
 
 #endif

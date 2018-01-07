@@ -1,45 +1,49 @@
 #include "om_type.h"
 
-OM* OMInit() {
-    OM* om = RedisModule_Alloc(sizeof(OM));
-    om->nodes = NULL;
-    om->lsentinel = RedisModule_Alloc(sizeof(LNode));
-    om->lsentinel->label = 0;
-    om->lsentinel->next = om->lsentinel;
-    om->lsentinel->prev = om->lsentinel;
-    om->lsentinel->upper = NULL;
-    om->lsentinel->key = NULL;
-    om->lsentinel->keylen = 0;
-    om->usentinel = RedisModule_Alloc(sizeof(UNode));
-    om->usentinel->label = 0;
-    om->usentinel->next = om->usentinel;
-    om->usentinel->prev = om->usentinel;
-    om->usentinel->lower = NULL;
-    om->usentinel->lsize = 0;
-    om->height = 1;
-    om->threshold = INITIAL_THRESHOLD;
-    return om;
+RedisOS* OSInit() {
+    RedisOS* redis_os = RedisModule_Alloc(sizeof(RedisOS));
+    redis_os->hash = NULL;
+    OrderedSet* os = RedisModule_Alloc(sizeof(OrderedSet));
+    os->lsentinel = RedisModule_Alloc(sizeof(LNode));
+    os->lsentinel->label = 0;
+    os->lsentinel->next = os->lsentinel;
+    os->lsentinel->prev = os->lsentinel;
+    os->lsentinel->upper = NULL;
+    os->lsentinel->key = NULL;
+    os->lsentinel->keylen = 0;
+    os->usentinel = RedisModule_Alloc(sizeof(UNode));
+    os->usentinel->label = 0;
+    os->usentinel->next = os->usentinel;
+    os->usentinel->prev = os->usentinel;
+    os->usentinel->lower = NULL;
+    os->usentinel->lsize = 0;
+    os->height = 1;
+    os->threshold = INITIAL_THRESHOLD;
+    redis_os->oset = os;
+    return redis_os;
 }
 
-void* OMRdbLoad(RedisModuleIO *io, int encver) {
-    if (encver > OM_ENCODING_VERSION) {
+void* OSRdbLoad(RedisModuleIO *io, int encver) {
+    if (encver > OS_ENCODING_VERSION) {
         return NULL;
     }
 
-    OM* om = OMInit();
+    RedisOS* redis_os = OSInit();
+    OrderedSet* os = redis_os->oset;
     int size = RedisModule_LoadUnsigned(io);
-    om->height = RedisModule_LoadUnsigned(io);
-    om->threshold = RedisModule_LoadDouble(io);
+    os->height = RedisModule_LoadUnsigned(io);
+    os->threshold = RedisModule_LoadDouble(io);
     UNode* curr_upper;
-    UNode* prev_upper = om->usentinel;
+    UNode* prev_upper = os->usentinel;
     LNode* curr_lower;
-    LNode* prev_lower = om->lsentinel;
+    LNode* prev_lower = os->lsentinel;
 
     size_t i = 0;
     while (i < size) {
         curr_upper = RedisModule_Alloc(sizeof(UNode));
         curr_upper->label = RedisModule_LoadUnsigned(io);
         curr_upper->lsize = RedisModule_LoadUnsigned(io);
+        printf("loading upper %lu %d\n", curr_upper->label, curr_upper->lsize);
         curr_upper->prev = prev_upper;
         prev_upper->next = curr_upper;
 
@@ -54,6 +58,8 @@ void* OMRdbLoad(RedisModuleIO *io, int encver) {
             curr_lower->upper = curr_upper;
             prev_lower->next = curr_lower;
 
+            printf("loading lower %lu %s %d\n", curr_lower->label, curr_lower->key, curr_lower->keylen);
+
             if (j == 0) {
                 curr_upper->lower = curr_lower;
             }
@@ -63,34 +69,37 @@ void* OMRdbLoad(RedisModuleIO *io, int encver) {
             Node* nh = RedisModule_Alloc(sizeof(Node));
             nh->key = curr_lower->key;
             nh->lnode = curr_lower;
-            HASH_ADD_KEYPTR(hh, om->nodes, curr_lower->key, curr_lower->keylen, nh);
+            HASH_ADD_KEYPTR(hh, redis_os->hash, curr_lower->key, curr_lower->keylen, nh);
         }
         prev_upper = curr_upper;
     }
-    prev_upper->next = om->usentinel;
-    om->usentinel->prev = prev_upper;
-    prev_lower->next = om->lsentinel;
-    om->lsentinel->prev = prev_lower;
+    prev_upper->next = os->usentinel;
+    os->usentinel->prev = prev_upper;
+    prev_lower->next = os->lsentinel;
+    os->lsentinel->prev = prev_lower;
 
-    return om;
+    return os;
 }
 
-void OMRdbSave(RedisModuleIO *io, void *obj) {
+void OSRdbSave(RedisModuleIO *io, void *obj) {
 
-    OM* om = obj;
-    RedisModule_SaveUnsigned(io, HASH_COUNT(om->nodes));
-    RedisModule_SaveUnsigned(io, om->height);
-    RedisModule_SaveDouble(io, om->threshold);
+    RedisOS* redis_os = obj;
+    OrderedSet* os = redis_os->oset;
+    RedisModule_SaveUnsigned(io, HASH_COUNT(redis_os->hash));
+    RedisModule_SaveUnsigned(io, os->height);
+    RedisModule_SaveDouble(io, os->threshold);
 
-    UNode* curr_upper = om->usentinel->next;
+    UNode* curr_upper = os->usentinel->next;
     LNode* curr_lower;
 
-    while (curr_upper != om->usentinel) {
+    while (curr_upper != os->usentinel) {
         RedisModule_SaveUnsigned(io, curr_upper->label);
         RedisModule_SaveUnsigned(io, curr_upper->lsize);
+        printf("saving upper %lu %d\n", curr_upper->label, curr_upper->lsize);
         curr_lower = curr_upper->lower;
 
         while (curr_lower->upper == curr_upper) {
+            printf("saving lower %lu %s %d\n", curr_lower->label, curr_lower->key, curr_lower->keylen);
             RedisModule_SaveUnsigned(io, curr_lower->label);
             RedisModule_SaveStringBuffer(io, curr_lower->key, curr_lower->keylen);
             curr_lower = curr_lower->next;
@@ -100,60 +109,62 @@ void OMRdbSave(RedisModuleIO *io, void *obj) {
     }
 }
 
-void OMAofRewrite(RedisModuleIO *aof, RedisModuleString *key, void *value) {
+void OSAofRewrite(RedisModuleIO *aof, RedisModuleString *key, void *value) {
 
-    OM* om = value;
-    LNode* curr_lower = om->lsentinel->next;
-    while (curr_lower != om->lsentinel) {
-        RedisModule_EmitAOF(aof, "OM.PUSHLAST", "sb", key, curr_lower->key, curr_lower->keylen);
+    RedisOS* redis_os = value;
+    LNode* curr_lower = redis_os->oset->lsentinel->next;
+    while (curr_lower != redis_os->oset->lsentinel) {
+        RedisModule_EmitAOF(aof, "OS.ADDLAST", "sb", key, curr_lower->key, curr_lower->keylen);
     }
 }
 
-void OMFree(void *value) {
+void OSFree(void *value) {
 
-    OM* om = value;
+    RedisOS* redis_os = value;
+    OrderedSet* os = redis_os->oset;
     Node* curr; 
     Node* tmp;
 
-    HASH_ITER(hh, om->nodes, curr, tmp) {
-        HASH_DEL(om->nodes, curr);
+    HASH_ITER(hh, redis_os->hash, curr, tmp) {
+        HASH_DEL(redis_os->hash, curr);
         RedisModule_Free(curr);
     }
 
-    LNode* curr_lower = om->lsentinel->next;
-    UNode* curr_upper = om->usentinel->next;
+    LNode* curr_lower = os->lsentinel->next;
+    UNode* curr_upper = os->usentinel->next;
     
-    while (curr_lower != om->lsentinel) {
-        curr_lower->next->prev = om->lsentinel;
-        om->lsentinel->next = curr_lower->next;
+    while (curr_lower != os->lsentinel) {
+        curr_lower->next->prev = os->lsentinel;
+        os->lsentinel->next = curr_lower->next;
         RedisModule_Free(curr_lower->key);
         RedisModule_Free(curr_lower);
-        curr_lower = om->lsentinel->next;
+        curr_lower = os->lsentinel->next;
     }
 
-    while (curr_upper != om->usentinel) {
-        curr_upper->next->prev = om->usentinel;
-        om->usentinel->next = curr_upper->next;
+    while (curr_upper != os->usentinel) {
+        curr_upper->next->prev = os->usentinel;
+        os->usentinel->next = curr_upper->next;
         RedisModule_Free(curr_upper);
-        curr_upper = om->usentinel->next;
+        curr_upper = os->usentinel->next;
     }
 
-    RedisModule_Free(om->lsentinel);
-    RedisModule_Free(om->usentinel);
-    RedisModule_Free(om);
+    RedisModule_Free(os->lsentinel);
+    RedisModule_Free(os->usentinel);
+    RedisModule_Free(os);
+    RedisModule_Free(redis_os);
 }
 
-size_t OMMemUsage(const void *value) {
+size_t OSMemUsage(const void *value) {
 
-    const OM* om = value;
+    const RedisOS* redis_os = value;
     const size_t lower_size = sizeof(LNode) + sizeof(Node);
     const size_t upper_size = sizeof(UNode);
     size_t size = sizeof(LNode); // Lower sentinel
     size += upper_size; // Upper sentinel
-    UNode* curr_upper = om->usentinel->next;
+    UNode* curr_upper = redis_os->oset->usentinel->next;
     LNode* curr_lower;
 
-    while (curr_upper != om->usentinel) {
+    while (curr_upper != redis_os->oset->usentinel) {
         size += upper_size;
         curr_lower = curr_upper->lower;
 

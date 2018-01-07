@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include "../src/om_api.h"
 #include "../src/om_type.h"
+#include "../src/om_hash.h"
 
 #define INITIAL_ARRAY 1000
 #define ITERATIONS 1000000
@@ -78,9 +79,9 @@ int main(int argc, char **argv) {
 		int rand_index = rand() % INITIAL_ARRAY;
 		if (strcmp(initial_array[rand_index], big_array[j]) != 0) {
 			if (j % 2) {
-				add_after(om, initial_array[rand_index], big_array[j], STR_SIZE);
+				add_after(om, get_node_read_mod(om->nodes, initial_array[rand_index]), big_array[j], STR_SIZE);
 			} else {
-				add_before(om, initial_array[rand_index], big_array[j], STR_SIZE);
+				add_before(om, get_node_read_mod(om->nodes, initial_array[rand_index]), big_array[j], STR_SIZE);
 			}
 		}
 	}
