@@ -2,6 +2,7 @@
 
 static RedisModuleType *RedisOSType;
 
+// Helper function to get LNode object from RedisModuleString for update purposes
 static LNode* getNodeFromHash(Node** hash, RedisModuleString* key, size_t* ret_count) {
     size_t member_len;
     const char* member_str = RedisModule_StringPtrLen(key, &member_len);

@@ -93,6 +93,7 @@ static inline LNode* lpopulate(LNode* head, UNode* upper, const size_t list_size
     uint64_t new_label = 0; 
     size_t i = 0; 
 
+    // Run over new list and update the label and upper pointer for nodes in it
     while (++i <= list_size) {
         head->label = new_label;
         head->upper = upper;
@@ -130,7 +131,7 @@ static void lsplit(LNode* this, const size_t size, size_t* height, double* thres
     }
 }
 
-static inline void linit(LNode* node, unsigned long long label, LNode* next, LNode* prev, UNode* upper) {
+static inline void linit(LNode* node, uint64_t label, LNode* next, LNode* prev, UNode* upper) {
     node->label = label;
     node->next = next;
     node->prev = prev;
