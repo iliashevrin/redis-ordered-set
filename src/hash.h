@@ -1,8 +1,8 @@
-#ifndef __OM_HASH_H__
-#define __OM_HASH_H__
+#ifndef __HASH_H__
+#define __HASH_H__
 
-#include "hash/uthash.h"
-#include "om_node.h"
+#include "uthash/uthash.h"
+#include "node.h"
 #include "redismodule.h"
 
 typedef struct {

@@ -1,5 +1,5 @@
-#ifndef __OM_NODE_H__
-#define __OM_NODE_H__
+#ifndef __NODE_H__
+#define __NODE_H__
 
 typedef struct lower_node LNode;
 typedef struct upper_node UNode;

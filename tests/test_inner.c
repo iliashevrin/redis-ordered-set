@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "minunit.h"
-#include "../src/om_internal.h"
-#include "../src/om_type.h"
-#include "../src/om_hash.h"
+#include "../src/oset.h"
+#include "../src/os_type.h"
+#include "../src/hash.h"
 
 static RedisOS* redis_os;
 

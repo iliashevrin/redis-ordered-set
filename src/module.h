@@ -1,9 +1,9 @@
-#ifndef __OM_MODULE_H__
-#define __OM_MODULE_H__
+#ifndef __MODULE_H__
+#define __MODULE_H__
 
-#include "om_internal.h"
-#include "om_hash.h"
-#include "om_type.h"
+#include "oset.h"
+#include "hash.h"
+#include "os_type.h"
 #include "redismodule.h"
 
 #define GET_OS_SUCCESS 0

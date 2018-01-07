@@ -8,7 +8,7 @@ uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 CFLAGS =  -Wall $(DEBUGFLAGS) -fPIC -std=gnu99 -D_GNU_SOURCE -I$(SRCDIR)
 CC:=$(shell sh -c 'type $(CC) >/dev/null 2>/dev/null && echo $(CC) || echo gcc')
 
-OBJS = $(INNEROBJS) om_module.o print_version.o
+OBJS = $(INNEROBJS) module.o print_version.o
 
 # Compile flags for linux / osx
 ifeq ($(uname_S),Linux)

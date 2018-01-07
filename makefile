@@ -1,6 +1,6 @@
 export ROOT := $(shell pwd)
 export SRCDIR := $(ROOT)/src
-export INNEROBJS := $(SRCDIR)/om_internal.o $(SRCDIR)/om_type.o $(SRCDIR)/om_hash.o
+export INNEROBJS := $(SRCDIR)/oset.o $(SRCDIR)/os_type.o $(SRCDIR)/hash.o
 
 all: 
 	$(MAKE) -C src all

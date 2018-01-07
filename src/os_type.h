@@ -1,9 +1,9 @@
-#ifndef __OM_TYPE_H__
-#define __OM_TYPE_H__
+#ifndef __OS_TYPE_H__
+#define __OS_TYPE_H__
 
 #include "redismodule.h"
-#include "om_internal.h"
-#include "om_hash.h"
+#include "oset.h"
+#include "hash.h"
 
 #define OS_ENCODING_VERSION 1
 #define INITIAL_THRESHOLD 1.3

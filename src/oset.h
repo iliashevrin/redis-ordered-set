@@ -1,10 +1,10 @@
-#ifndef __OM_INTERNAL_H__
-#define __OM_INTERNAL_H__
+#ifndef __OSET_H__
+#define __OSET_H__
 
 #include <stdlib.h>
 #include <math.h>
 #include "redismodule.h"
-#include "om_node.h"
+#include "node.h"
 
 // #include <stdio.h>
 

@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include "../src/om_internal.h"
-#include "../src/om_type.h"
-#include "../src/om_hash.h"
+#include "../src/oset.h"
+#include "../src/os_type.h"
+#include "../src/hash.h"
 
 #define INITIAL_ARRAY 1000
 #define ITERATIONS 1000000

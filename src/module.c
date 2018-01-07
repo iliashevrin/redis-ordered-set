@@ -1,4 +1,4 @@
-#include "om_module.h"
+#include "module.h"
 
 static RedisModuleType *RedisOSType;
 

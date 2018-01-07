@@ -1,4 +1,4 @@
-#include "om_hash.h"
+#include "hash.h"
 
 // Should be called only if redis_key does not exist
 inline LNode* HASH_create_node(Node** hash, const char* key, const size_t keylen) {

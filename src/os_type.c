@@ -1,4 +1,4 @@
-#include "om_type.h"
+#include "os_type.h"
 
 RedisOS* OSInit() {
     RedisOS* redis_os = RedisModule_Alloc(sizeof(RedisOS));

@@ -1,4 +1,4 @@
-#include "om_internal.h"
+#include "oset.h"
 
 static inline uint64_t step(const size_t height, const long double threshold) {
     if (height < UNSIGNED_SIZE) {
