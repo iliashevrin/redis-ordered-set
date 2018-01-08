@@ -5,7 +5,7 @@ Like regular Redis Sets and Sorted Sets, members in an Ordered Set are unique. U
 
 ## Implementation notes
 
-The implementation is based on [this article](http://erikdemaine.org/papers/DietzSleator_ESA2002/paper.pdf), and employs one level of indirection as described in [this article](https://www.cs.cmu.edu/~sleator/papers/maintaining-order.pdf) enabling an amortized O(1) insertion of new elements. The implementation uses an underlying hash table that provides constant time queries of next and previous elements for any given element.
+The implementation is based on [this article](http://erikdemaine.org/papers/DietzSleator_ESA2002/paper.pdf) (Two Simplified Algorithms for Maintaining Order in a List, Bender et al), and employs one level of indirection as described in section #2 of [this article](https://www.cs.cmu.edu/~sleator/papers/maintaining-order.pdf) (Dietz and Sleator, Two Algorithms for Maintaining Order in a List) enabling an amortized O(1) insertion of new elements. The implementation uses an underlying hash table that provides constant time queries of next and previous elements for any given element.
 
 Note that the mentioned papers describe a data structure that is a list (i.e. duplicates are allowed). However, owing to the fact that we map between command line strings to elements in the structure via a hash table, uniqueness must be mainted, so the structure is eventually a set.
 
@@ -16,14 +16,31 @@ In order to use the module simply clone the repo into your machine and run make 
 Here's an example showing how to use the new data structure:
 
 ```
-redis> OM.ADDHEAD my_set foo
+redis> os.addhead my_ordered_set foo
+(integer) 1
+redis> os.addafter my_ordered_set foo bar baz
+(integer) 2
+127.0.0.1:6380> os.addbefore my_ordered_set baz bar1 bar2 bar3
+(integer) 3
+redis> os.compare my_ordered_set baz foo
+(integer) 1
+redis> os.compare my_ordered_set foo baz
+(integer) -1
+redis> os.members my_ordered_set
+ 1) "foo"
+ 2) "bar"
+ 3) "bar1"
+ 4) "bar2"
+ 5) "bar3"
+ 6) "baz"
+
 ```
 
 ## Commands
 
 ### OM.ADDHEAD key member [member ...]
 
-> Time complexity: O(N), where N is the number of added members
+> Time complexity: O(k), where k is the number of added members
 
 Adds one or more `member` to the head of an ordered set stored in `key`.
 
@@ -31,13 +48,30 @@ Adds one or more `member` to the head of an ordered set stored in `key`.
 
 All `OM.ADD*` commands require labeling, hence when adding a single member they demonstrate O(1) amortized time complexity, and O(logN) worst case time where N is the ordered set's cardinality.
 
+#### More about addition in general
+
+If one or more 'member' is already found in the set, the commands updates their position. If two or more 'member' are supplied, their order after the addition will resemble the order of the passed arguments, i.e.
+
+```
+redis> os.addhead my_ordered_set a
+(integer) 1
+redis> os.addafter my_ordered_set b c d
+(integer) 3
+redis> os.members my_ordered_set
+ 1) "b"
+ 2) "c"
+ 3) "d"
+ 4) "a"
+
+```
+
 #### Return value
 
 Integer reply: the number of members added to the ordered set.
 
 ### OM.ADDTAIL key member [member ...]
 
-> Time complexity: O(N), where N is the number of added members
+> Time complexity: O(k), where k is the number of added members
 
 Adds one or more `member` to the tail of an ordered set stored in `key`.
 
@@ -47,7 +81,7 @@ Integer reply: the number of members added to the ordered set.
 
 ### OM.ADDAFTER key existing member [member ...]
 
-> Time complexity: O(N), where N is the number of added members
+> Time complexity: O(k), where k is the number of added members
 
 Inserts one or more `member` immediately after the `existing` member in an ordered set stored in `key`.
 
@@ -57,7 +91,7 @@ Integer reply: the number of members added to the ordered set, or `nil` if `key`
 
 ### OM.ADDBEFORE key existing member [member ...]
 
-> Time complexity: O(N), where N is the number of added members
+> Time complexity: O(k), where k is the number of added members
 
 Inserts one or more `member` immediately before the `existing` member in an ordered set stored in `key`.
 
@@ -67,7 +101,7 @@ Integer reply: the number of members added to the ordered set, or `nil` if `key`
 
 ### OM.REM key member [member ...]
 
-> Time complexity: O(N), where N is the number of removed members
+> Time complexity: O(k), where k is the number of removed members
 
 Removes one or more `member` from an ordered set stored in `key`.
 
