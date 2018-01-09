@@ -286,7 +286,7 @@ static int OSCompare_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv,
 
 static int OSNext_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
-    if (argc != 4) {
+    if (argc < 3 || argc > 4) {
         RedisModule_WrongArity(ctx);
         return REDISMODULE_ERR;
     }
@@ -307,21 +307,26 @@ static int OSNext_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
     size_t curr_len;
     const char* curr_str = RedisModule_StringPtrLen(argv[2], &curr_len);
     LNode* curr = HASH_get_node(os->hash, curr_str);
-
-    long long ll;
-    long arr_len = 0;
-    int long_result = RedisModule_StringToLongLong(argv[3], &ll);
-
     if (curr == NULL) {
         RedisModule_ReplyWithArray(ctx, 0);
         return REDISMODULE_OK;
-    } else if (long_result == REDISMODULE_ERR || ll < 0) {
-        RedisModule_ReplyWithError(ctx, OS_INVALID_COUNT);
-        return REDISMODULE_ERR;
     }
 
-    if (ll == 0) {
-        ll = HASH_table_size(os->hash);
+    long long ll;
+    long long arr_len = 0;
+    if (argc == 3) {
+        ll = 1;
+    } else {
+        int long_result = RedisModule_StringToLongLong(argv[3], &ll);
+
+        if (long_result == REDISMODULE_ERR || ll < 0) {
+            RedisModule_ReplyWithError(ctx, OS_INVALID_COUNT);
+            return REDISMODULE_ERR;
+        }
+
+        if (ll == 0) {
+            ll = HASH_table_size(os->hash);
+        }
     }
 
     RedisModule_ReplyWithArray(ctx, REDISMODULE_POSTPONED_ARRAY_LEN);
@@ -341,7 +346,7 @@ static int OSNext_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
 
 static int OSPrev_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
-    if (argc != 4) {
+    if (argc < 3 || argc > 4) {
         RedisModule_WrongArity(ctx);
         return REDISMODULE_ERR;
     }
@@ -362,21 +367,26 @@ static int OSPrev_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
     size_t curr_len;
     const char* curr_str = RedisModule_StringPtrLen(argv[2], &curr_len);
     LNode* curr = HASH_get_node(os->hash, curr_str);
-
-    long long ll;
-    long arr_len = 0;
-    int long_result = RedisModule_StringToLongLong(argv[3], &ll);
-
     if (curr == NULL) {
         RedisModule_ReplyWithArray(ctx, 0);
         return REDISMODULE_OK;
-    } else if (long_result == REDISMODULE_ERR || ll < 0) {
-        RedisModule_ReplyWithError(ctx, OS_INVALID_COUNT);
-        return REDISMODULE_ERR;
     }
 
-    if (ll == 0) {
-        ll = HASH_table_size(os->hash);
+    long long ll;
+    long long arr_len = 0;
+    if (argc == 3) {
+        ll = 1;
+    } else {
+        int long_result = RedisModule_StringToLongLong(argv[3], &ll);
+
+        if (long_result == REDISMODULE_ERR || ll < 0) {
+            RedisModule_ReplyWithError(ctx, OS_INVALID_COUNT);
+            return REDISMODULE_ERR;
+        }
+
+        if (ll == 0) {
+            ll = HASH_table_size(os->hash);
+        }
     }
 
     RedisModule_ReplyWithArray(ctx, REDISMODULE_POSTPONED_ARRAY_LEN);
@@ -396,7 +406,7 @@ static int OSPrev_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
 
 static int OSHead_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
-    if (argc != 3) {
+    if (argc < 2 || argc > 3) {
         RedisModule_WrongArity(ctx);
         return REDISMODULE_ERR;
     }
@@ -417,16 +427,20 @@ static int OSHead_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
     LNode* curr = LSENTINEL->next;
 
     long long ll;
-    long arr_len = 0;
-    int long_result = RedisModule_StringToLongLong(argv[2], &ll);
+    long long arr_len = 0;
+    if (argc == 2) {
+        ll = 1;
+    } else {
+        int long_result = RedisModule_StringToLongLong(argv[2], &ll);
 
-    if (long_result == REDISMODULE_ERR || ll < 0) {
-        RedisModule_ReplyWithError(ctx, OS_INVALID_COUNT);
-        return REDISMODULE_ERR;
-    }
+        if (long_result == REDISMODULE_ERR || ll < 0) {
+            RedisModule_ReplyWithError(ctx, OS_INVALID_COUNT);
+            return REDISMODULE_ERR;
+        }
 
-    if (ll == 0) {
-        ll = HASH_table_size(os->hash);
+        if (ll == 0) {
+            ll = HASH_table_size(os->hash);
+        }
     }
 
     RedisModule_ReplyWithArray(ctx, REDISMODULE_POSTPONED_ARRAY_LEN);
@@ -446,7 +460,7 @@ static int OSHead_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
 
 static int OSTail_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
-    if (argc != 3) {
+    if (argc < 2 || argc > 3) {
         RedisModule_WrongArity(ctx);
         return REDISMODULE_ERR;
     }
@@ -467,16 +481,20 @@ static int OSTail_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
     LNode* curr = LSENTINEL->prev;
 
     long long ll;
-    long arr_len = 0;
-    int long_result = RedisModule_StringToLongLong(argv[2], &ll);
+    long long arr_len = 0;
+    if (argc == 2) {
+        ll = 1;
+    } else {
+        int long_result = RedisModule_StringToLongLong(argv[2], &ll);
 
-    if (long_result == REDISMODULE_ERR || ll < 0) {
-        RedisModule_ReplyWithError(ctx, OS_INVALID_COUNT);
-        return REDISMODULE_ERR;
-    }
+        if (long_result == REDISMODULE_ERR || ll < 0) {
+            RedisModule_ReplyWithError(ctx, OS_INVALID_COUNT);
+            return REDISMODULE_ERR;
+        }
 
-    if (ll == 0) {
-        ll = HASH_table_size(os->hash);
+        if (ll == 0) {
+            ll = HASH_table_size(os->hash);
+        }
     }
 
     RedisModule_ReplyWithArray(ctx, REDISMODULE_POSTPONED_ARRAY_LEN);

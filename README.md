@@ -20,7 +20,7 @@ redis> os.addhead my_ordered_set foo
 (integer) 1
 redis> os.addafter my_ordered_set foo bar baz
 (integer) 2
-127.0.0.1:6380> os.addbefore my_ordered_set baz bar1 bar2 bar3
+redis> os.addbefore my_ordered_set baz bar1 bar2 bar3
 (integer) 3
 redis> os.compare my_ordered_set baz foo
 (integer) 1
@@ -134,49 +134,49 @@ Returns all members from head to tail in the ordered set stored in `key`.
 
 Array reply: all members of the ordered set.
 
-### OM.NEXT key member count
+### OM.NEXT key member [count]
 
-> Time complexity: O(N), where N is the members count
+> Time complexity: O(k), where k is the returned members count
 
 Returns up to `count` members that follow `member` in the ordered set stored in `key` .
 
-`count` may be any positive integer, and when set to **0** all members until the tail are returned. This operation will return less than `count` members if the tail is encountered prematurely.
+`count` may be any positive integer, and when set to **0** all members until the tail are returned. When absent, the immediate next member is returned. This operation will return less than `count` members if the tail is encountered prematurely.
 
 #### Return value
 
 Array reply: the members in the ordered set.
 
-### OM.PREV key member count
+### OM.PREV key member [count]
 
-> Time complexity: O(N), where N is the members count
+> Time complexity: O(k), where k is the returned members count
 
 Returns in reverse order up to  `count` members that precede `member` in the ordered set stored in `key` .
 
-`count` may be any positive integer, and when set to **0** all members up to the head are returned. This operation will return less than `count` members if the head is encountered prematurely.
+`count` may be any positive integer, and when set to **0** all members up to the head are returned. When absent, the immediate previous member is returned. This operation will return less than `count` members if the head is encountered prematurely.
 
 #### Return value
 
 Array reply: the members in the ordered set in reverse order.
 
-### OM.HEAD key count
+### OM.HEAD key [count]
 
-> Time complexity: O(N), where N is the members count
+> Time complexity: O(k), where k is the returned members count
 
 Returns up to `count` members from the head of the ordered set stored in `key` .
 
-`count` may be any positive integer, and when set to **0** all members until the tail are returned. This operation will return less than `count` members if the tail is encountered prematurely.
+`count` may be any positive integer, and when set to **0** all members until the tail are returned. When absent, the single head member is returned. This operation will return less than `count` members if the tail is encountered prematurely.
 
 #### Return value
 
 Array reply: the members in the ordered set.
 
-### OM.TAIL key count
+### OM.TAIL key [count]
 
-> Time complexity: O(N), where N is the members count
+> Time complexity: O(k), where k is the returned members count
 
 Returns in reverse order up to `count` members from the tail of the ordered set stored in `key` .
 
-`count` may be any positive integer, and when set to **0** all members until the head are returned. This operation will return less than `count` members if the head is encountered prematurely.
+`count` may be any positive integer, and when set to **0** all members until the head are returned. When absent, the single tail member is returned. This operation will return less than `count` members if the head is encountered prematurely.
 
 #### Return value
 
