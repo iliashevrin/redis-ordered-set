@@ -68,6 +68,28 @@ class OMTestCase(ModuleTestCase('../src/orderedset.so')):
 		self.assertEquals(1, self.cmd('os.rem', 'test', 'qux', 'bar!'))
 		self.assertEquals(0, self.cmd('os.card', 'test'))
 
+	def test_rem_head(self):
+
+		c, s = self.client, self.server
+
+		self.cmd('os.addhead', 'test', 'foo', 'bar!', 'baz', 'qux')
+		self.assertEquals(1, self.cmd('os.remhead', 'test', 1))
+		self.assertEquals(['bar!','baz','qux'], self.cmd('os.members', 'test'))
+		self.assertEquals(1, self.cmd('os.remhead', 'test'))
+		self.assertEquals(2, self.cmd('os.remhead', 'test', 10))
+		self.assertEquals(0, self.cmd('os.card', 'test'))
+
+	def test_rem_tail(self):
+
+		c, s = self.client, self.server
+
+		self.cmd('os.addhead', 'test', 'foo', 'bar!', 'baz', 'qux')
+		self.assertEquals(1, self.cmd('os.remtail', 'test', 1))
+		self.assertEquals(['foo','bar!','baz'], self.cmd('os.members', 'test'))
+		self.assertEquals(1, self.cmd('os.remtail', 'test'))
+		self.assertEquals(2, self.cmd('os.remtail', 'test', 10))
+		self.assertEquals(0, self.cmd('os.card', 'test'))
+
 	def test_compare(self):
 
 		c, s = self.client, self.server
@@ -89,6 +111,8 @@ class OMTestCase(ModuleTestCase('../src/orderedset.so')):
 		c, s = self.client, self.server
 
 		self.cmd('os.addhead', 'test', 'foo', 'bar!', 'baz', 'qux')
+		self.assertEquals(['bar!'], self.cmd('os.next', 'test', 'foo'))
+		self.assertEquals([], self.cmd('os.next', 'test', 'qux'))
 		self.assertEquals(['bar!','baz','qux'], self.cmd('os.next', 'test', 'foo', 3))
 		self.assertEquals(['bar!','baz','qux'], self.cmd('os.next', 'test', 'foo', 10))
 		self.assertEquals(['baz','qux'], self.cmd('os.next', 'test', 'bar!', 0))
@@ -106,6 +130,8 @@ class OMTestCase(ModuleTestCase('../src/orderedset.so')):
 		c, s = self.client, self.server
 
 		self.cmd('os.addhead', 'test', 'foo', 'bar!', 'baz', 'qux')
+		self.assertEquals(['baz'], self.cmd('os.prev', 'test', 'qux'))
+		self.assertEquals([], self.cmd('os.prev', 'test', 'foo'))
 		self.assertEquals(['baz','bar!','foo'], self.cmd('os.prev', 'test', 'qux', 3))
 		self.assertEquals(['baz','bar!','foo'], self.cmd('os.prev', 'test', 'qux', 10))
 		self.assertEquals(['bar!','foo'], self.cmd('os.prev', 'test', 'baz', 0))
@@ -123,6 +149,7 @@ class OMTestCase(ModuleTestCase('../src/orderedset.so')):
 		c, s = self.client, self.server
 
 		self.cmd('os.addhead', 'test', 'foo', 'bar!', 'baz', 'qux')
+		self.assertEquals(['foo'], self.cmd('os.head', 'test'))
 		self.assertEquals(['foo','bar!','baz'], self.cmd('os.head', 'test', 3))
 		self.assertEquals(['foo','bar!','baz', 'qux'], self.cmd('os.head', 'test', 10))
 		self.assertEquals(['foo','bar!','baz', 'qux'], self.cmd('os.head', 'test', 0))
@@ -137,6 +164,7 @@ class OMTestCase(ModuleTestCase('../src/orderedset.so')):
 		c, s = self.client, self.server
 
 		self.cmd('os.addhead', 'test', 'foo', 'bar!', 'baz', 'qux')
+		self.assertEquals(['qux'], self.cmd('os.tail', 'test'))
 		self.assertEquals(['qux','baz','bar!'], self.cmd('os.tail', 'test', 3))
 		self.assertEquals(['qux','baz','bar!','foo'], self.cmd('os.tail', 'test', 10))
 		self.assertEquals(['qux','baz','bar!','foo'], self.cmd('os.tail', 'test', 0))

@@ -168,6 +168,118 @@ static int OSRemove_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, 
     return REDISMODULE_OK;
 }
 
+static int OSRemHead_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+
+    if (argc < 2 || argc > 3) {
+        RedisModule_WrongArity(ctx);
+        return REDISMODULE_ERR;
+    }
+
+    RedisModule_AutoMemory(ctx);
+    RedisModule_ReplicateVerbatim(ctx);
+
+    RedisOS* os;
+    RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
+    int result = getOS(key, &os);
+
+    if (result == GET_OS_WRONG_TYPE) {
+        RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+        return REDISMODULE_ERR;
+    } else if (result == GET_OS_NOT_EXIST) {
+        RedisModule_ReplyWithNull(ctx);
+        return REDISMODULE_OK;
+    }
+
+    LNode* curr = LSENTINEL->next;
+
+    long long ll;
+    if (argc == 2) {
+        ll = 1;
+    } else {
+        int long_result = RedisModule_StringToLongLong(argv[2], &ll);
+
+        if (long_result == REDISMODULE_ERR || ll <= 0) {
+            RedisModule_ReplyWithError(ctx, OS_INVALID_COUNT);
+            return REDISMODULE_ERR;
+        }
+    }
+
+    size_t removed = 0;
+
+    for (size_t i = 0; i < ll; ++i) {
+        HASH_remove_node(&os->hash, curr->key);
+        OSET_remove(curr);
+        ++removed;
+
+        // Removed last node so we delete structure from redis keyset
+        if (!HASH_table_size(os->hash)) {
+            RedisModule_DeleteKey(key);
+            break;
+        }
+
+        curr = curr->next;
+    }
+
+    RedisModule_ReplyWithLongLong(ctx, removed);
+    return REDISMODULE_OK;
+}
+
+static int OSRemTail_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+
+    if (argc < 2 || argc > 3) {
+        RedisModule_WrongArity(ctx);
+        return REDISMODULE_ERR;
+    }
+
+    RedisModule_AutoMemory(ctx);
+    RedisModule_ReplicateVerbatim(ctx);
+
+    RedisOS* os;
+    RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
+    int result = getOS(key, &os);
+
+    if (result == GET_OS_WRONG_TYPE) {
+        RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+        return REDISMODULE_ERR;
+    } else if (result == GET_OS_NOT_EXIST) {
+        RedisModule_ReplyWithNull(ctx);
+        return REDISMODULE_OK;
+    }
+
+    LNode* curr = LSENTINEL->prev;
+
+    long long ll;
+    if (argc == 2) {
+        ll = 1;
+    } else {
+        int long_result = RedisModule_StringToLongLong(argv[2], &ll);
+
+        if (long_result == REDISMODULE_ERR || ll <= 0) {
+            RedisModule_ReplyWithError(ctx, OS_INVALID_COUNT);
+            return REDISMODULE_ERR;
+        }
+    }
+
+    size_t removed = 0;
+
+    for (size_t i = 0; i < ll; ++i) {
+        HASH_remove_node(&os->hash, curr->key);
+        OSET_remove(curr);
+        ++removed;
+
+        // Removed last node so we delete structure from redis keyset
+        if (!HASH_table_size(os->hash)) {
+            RedisModule_DeleteKey(key);
+            break;
+        }
+
+        curr = curr->prev;
+    }
+
+    RedisModule_ReplyWithLongLong(ctx, removed);
+    return REDISMODULE_OK;
+}
+
 static int OSAddHead_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
     if (argc < 3) {
@@ -589,6 +701,12 @@ int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) 
         return REDISMODULE_ERR;
     }
     if (RedisModule_CreateCommand(ctx, "OS.ADDTAIL", OSAddTail_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
+        return REDISMODULE_ERR;
+    }
+    if (RedisModule_CreateCommand(ctx, "OS.REMHEAD", OSRemHead_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
+        return REDISMODULE_ERR;
+    }
+    if (RedisModule_CreateCommand(ctx, "OS.REMTAIL", OSRemTail_RedisCommand, "write deny-oom fast", 1, 1, 1) != REDISMODULE_OK) {
         return REDISMODULE_ERR;
     }
     if (RedisModule_CreateCommand(ctx, "OS.NEXT", OSNext_RedisCommand, "readonly", 1, 1, 1) != REDISMODULE_OK) {

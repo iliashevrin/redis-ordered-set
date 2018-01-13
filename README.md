@@ -109,6 +109,30 @@ Removes one or more `member` from an ordered set stored in `key`.
 
 Integer reply: the number of members removed from the ordered set, or `nil` if `key` does not exist.
 
+### OM.REMHEAD key [count]
+
+> Time complexity: O(k), where k is the number of removed members
+
+Removes up to `count` members from the head of the ordered set stored in `key` .
+
+`count` may be any positive non-zero integer. When absent, the single head member is removed. This operation will remove less than `count` members if the tail is encountered prematurely.
+
+#### Return value
+
+Integer reply: the number of members removed from the ordered set, or `nil` if `key` does not exist.
+
+### OM.REMTAIL key [count]
+
+> Time complexity: O(k), where k is the number of removed members
+
+Removes up to `count` members from the tail of the ordered set stored in `key` .
+
+`count` may be any positive non-zero integer. When absent, the single tail member is removed. This operation will remove less than `count` members if the head is encountered prematurely.
+
+#### Return value
+
+Integer reply: the number of members removed from the ordered set, or `nil` if `key` does not exist.
+
 ### OM.COMPARE key member1 member2
 
 > Time complexity: O(1)
