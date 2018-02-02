@@ -5,7 +5,9 @@ Like regular Redis Sets and Sorted Sets, members in an Ordered Set are unique. U
 
 ## Implementation notes
 
-The implementation is based on [this article](http://erikdemaine.org/papers/DietzSleator_ESA2002/paper.pdf) (Two Simplified Algorithms for Maintaining Order in a List, Bender et al), and employs one level of indirection as described in section #2 of [this article](https://www.cs.cmu.edu/~sleator/papers/maintaining-order.pdf) (Dietz and Sleator, Two Algorithms for Maintaining Order in a List) enabling an amortized O(1) insertion of new elements. The implementation uses an underlying hash table that provides constant time queries of next and previous elements for any given element.
+The ordered set is basically the familiar LinkedHashSet Java class - a doubly linked list with an underlying hash table that provides constant time queries of next and previous elements for any given element. Each element is also equiped with an integer label according to its order in the set.
+
+The labeling implementation is based on [this article](http://erikdemaine.org/papers/DietzSleator_ESA2002/paper.pdf) (Two Simplified Algorithms for Maintaining Order in a List, Bender et al), and employs one level of indirection as described in section #2 of [this article](https://www.cs.cmu.edu/~sleator/papers/maintaining-order.pdf) (Dietz and Sleator, Two Algorithms for Maintaining Order in a List) enabling an amortized O(1) insertion of new elements.
 
 Note that the mentioned papers describe a data structure that is a list (i.e. duplicates are allowed). However, owing to the fact that we map between command line strings to elements in the structure via a hash table, uniqueness must be mainted, so the structure is eventually a set.
 
