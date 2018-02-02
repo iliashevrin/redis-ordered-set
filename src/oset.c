@@ -81,7 +81,7 @@ static UNode* uadd(UNode* this, LNode* lower, size_t* height, double* threshold)
         if (this->label + 1 == new_node->next->label) {
             urelabel(this, new_node, height, threshold);
         } else {
-            new_node->label = (this->label + new_node->next->label) >> 1;
+            new_node->label = (this->label + new_node->next->label) / 2;
         }
     }
 
@@ -108,7 +108,7 @@ static void lsplit(LNode* this, const size_t size, size_t* height, double* thres
 
     size_t initial_size = this->upper->lsize;
     size_t log_size = LOG2(size);
-    size_t dbl_log_size = log_size << 1;
+    size_t dbl_log_size = log_size * 2;
     // In case no split is needed and only label spacing
     if (dbl_log_size > initial_size) {
         lpopulate(this->upper->lower, this->upper, initial_size, size);
@@ -144,7 +144,7 @@ static void lrelabel(LNode* this, const size_t size, size_t* height, double* thr
             // In this case list size should be approx O(logN)
             lsplit(this, size, height, threshold);
         } else {
-            this->label = (this->label + this->next->label) >> 1;
+            this->label = (this->label + this->next->label) / 2;
         }
     } else {
         // Prevent lists of O(N) length
